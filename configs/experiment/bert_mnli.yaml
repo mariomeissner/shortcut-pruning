@@ -1,0 +1,25 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=bert_mnli.yaml
+
+defaults:
+  - override /mode: exp.yaml
+  - override /trainer: default.yaml
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: hf_datamodule.yaml
+  - override /callbacks: lr_monitor.yaml
+  - override /logger: tensorboard.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+# name of the run determines folder name in logs
+# it's also accessed by loggers
+name: "bert_mnli"
+
+seed: 42
+
+trainer:
+  max_epochs: 3
+  gpus: 1
