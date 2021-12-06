@@ -1,0 +1,10 @@
+# @package _global_
+
+# run in experiment mode with:
+# `python run.py mode=exp name=experiment_name`
+
+test_mode: True
+
+hydra:
+  run:
+    dir: logs/test/${name}/${version}

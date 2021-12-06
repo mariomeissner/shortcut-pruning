@@ -1,7 +1,7 @@
 _target_: src.datamodules.hf_datamodule.HFDataModule
 
+dataset_name: null # override in your experiment! should be foldername inside data/
 data_dir: ${data_dir} # data_dir is specified in config.yaml
-dataset_folder: "mnli-tokenized"
 tokenizer_name: ${model.huggingface_model}
 batch_size: 128
 num_workers: 8

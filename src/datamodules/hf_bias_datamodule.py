@@ -60,7 +60,7 @@ class HFDataModule(LightningDataModule):
             self.eval_key += "_matched"
             self.test_key += "_matched"
 
-        self.keep_columns=[
+        self.keep_columns = [
             "idx",
             "input_ids",
             "attention_mask",
@@ -98,7 +98,7 @@ class HFDataModule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_from_disk(self.dataset_path)
-            keep_columns = [column for column in self.keep_columns if column in self.dataset['train'].column_names]
+            keep_columns = [column for column in self.keep_columns if column in self.dataset["train"].column_names]
             self.dataset.set_format("torch", columns=keep_columns)
 
     def train_dataloader(self):

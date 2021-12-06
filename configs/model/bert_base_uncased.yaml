@@ -1,6 +1,6 @@
 _target_: src.models.hf_model.SequenceClassificationTransformer
 
+num_labels: null # Override me in your experiment config!
 huggingface_model: "bert-base-uncased"
-num_labels: 3
 learning_rate: 3e-5
 batch_size: ${datamodule.batch_size}

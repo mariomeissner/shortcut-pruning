@@ -16,17 +16,18 @@ defaults:
 
 # name of the run determines folder name in logs
 # it's also accessed by loggers
-name: "bert_mnli"
+name: "bert_snli"
 seed: 42
-test_after_training: False # MNLI cannot be tested, test set labels are hidden
+test_after_training: True # Test set of SNLI is available
 
 model:
   num_labels: 3
 
 datamodule:
-  dataset_name: "mnli-tokenized"
+  dataset_name: "snli-tokenized"
   batch_size: 256 # If you have a beefy GPU (loving those A100s!)
 
 trainer:
+  precision: 16
   max_epochs: 3
   gpus: 1

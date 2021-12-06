@@ -80,10 +80,9 @@ def train(config: DictConfig) -> Optional[float]:
     score = trainer.callback_metrics.get(config.get("optimized_metric"))
 
     # Test the model
-    # TODO: Fix test loop
-    # if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
-    #     log.info("Starting testing!")
-    #     trainer.test(model=model, datamodule=datamodule, ckpt_path="best")
+    if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
+        log.info("Starting testing!")
+        trainer.test(model=model, datamodule=datamodule)
 
     # Make sure everything closed properly
     log.info("Finalizing!")
@@ -97,8 +96,10 @@ def train(config: DictConfig) -> Optional[float]:
     )
 
     # Print path to best checkpoint
-    if not config.trainer.get("fast_dev_run"):
-        log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
+    # if not config.trainer.get("fast_dev_run"):
+    #     log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
+
+    log.info("Done!")
 
     # Return metric score for hyperparameter optimization
     return score
