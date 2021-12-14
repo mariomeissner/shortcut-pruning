@@ -2,6 +2,7 @@ from argparse import ArgumentError
 from typing import Optional, Tuple
 
 import os
+from datasets.dataset_dict import DatasetDict
 import torch
 import datasets
 from pathlib import Path
@@ -11,6 +12,10 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers import DataCollatorWithPadding
+from src.utils import utils
+from bias_utils import load_bias, load_teacher_probs
+
+log = utils.get_logger(__name__)
 
 
 class HFDataModule(LightningDataModule):
@@ -37,6 +42,7 @@ class HFDataModule(LightningDataModule):
         self,
         data_dir: str,
         dataset_name: str,
+        bias_name: str,
         tokenizer_name: str,
         batch_size: int = 64,
         max_length: int = 128,
@@ -53,10 +59,13 @@ class HFDataModule(LightningDataModule):
         self.tokenizer = None
         self.collator_fn = None
 
+        self.dataset_path = Path(self.hparams.data_dir) / self.hparams.dataset_name
+        self.bias_path = Path(self.hparams.data_dir) / self.hparams.bias_name
+
         self.eval_key = "validation"
         self.test_key = "test"
 
-        if "mnli" in dataset_name:
+        if "mnli" in self.hparams.dataset_name:
             self.eval_key += "_matched"
             self.test_key += "_matched"
 
@@ -79,7 +88,6 @@ class HFDataModule(LightningDataModule):
         We should not assign anything here, so this function simply ensures
         that the pre-processed data is available.
         """
-        self.dataset_path = Path(self.hparams.data_dir) / self.hparams.dataset_name
         if not os.path.exists(self.dataset_path):
             raise ValueError("The provided folder does not exist.")
         AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)  # TODO: Load according to model-name
@@ -97,7 +105,30 @@ class HFDataModule(LightningDataModule):
             self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer)
 
         if not self.dataset:
+            log.info("Preparing the dataset and appending biases.")
             self.dataset = datasets.load_from_disk(self.dataset_path)
+            
+            # Get rid of mismatched
+            self.dataset = DatasetDict({
+                "train" : self.dataset['train'],
+                "validation_matched" : self.dataset['validation_matched'],
+                "test_matched" : self.dataset['test_matched']
+            })
+
+            bias = load_teacher_probs(self.bias_path)
+
+            def append_bias(example):
+                example["teacher_probs"] = bias[str(example["idx"])]
+                return example
+
+            def append_empty_bias(example):
+                example["teacher_probs"] = [0,0,0] # Dummy bias
+                return example
+
+            self.dataset["train"] = self.dataset["train"].map(append_bias)
+            self.dataset[self.eval_key] = self.dataset[self.eval_key].map(append_empty_bias)
+            self.dataset[self.test_key] = self.dataset[self.test_key].map(append_empty_bias)
+
             keep_columns = [column for column in self.keep_columns if column in self.dataset["train"].column_names]
             self.dataset.set_format("torch", columns=keep_columns)
 

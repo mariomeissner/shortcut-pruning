@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:
+  - override /mode: exp.yaml
+  - override /trainer: default.yaml
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: hf_bias_datamodule.yaml
+  - override /callbacks: default.yaml
+  - override /logger: tensorboard.yaml
+
+name: "bert_mnli_reweight_teacher"
+seed: 42
+test_after_training: False # MNLI cannot be tested, test set labels are hidden
+
+model:
+  loss_fn:
+    _target_: src.losses.ReweightByTeacher
+  num_labels: 3
+
+datamodule:
+  dataset_name: "mnli-tokenized"
+  bias_name: "mnli_shallow_2K_fixed.json"
+  batch_size: 256 # If you have a beefy GPU (loving those A100s!)
+
+trainer:
+  max_epochs: 3
+  gpus: 1

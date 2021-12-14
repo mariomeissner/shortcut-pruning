@@ -32,6 +32,7 @@ class SequenceClassificationTransformer(LightningModule):
         self,
         huggingface_model: str,
         num_labels: int,
+        loss_fn: nn.Module,
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
@@ -57,7 +58,7 @@ class SequenceClassificationTransformer(LightningModule):
         self.dropout = nn.Dropout(dropout_prob)
 
         # loss function (assuming single-label multi-class classification)
-        self.loss_fn = torch.nn.CrossEntropyLoss()  # TODO: Make this customizable
+        self.loss_fn = loss_fn
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
@@ -79,14 +80,15 @@ class SequenceClassificationTransformer(LightningModule):
         pooler = outputs.pooler_output
         pooler = self.dropout(pooler)
         logits = self.classifier(pooler)
-        return logits
+        preds = torch.argmax(logits, dim=1)
+        return logits, preds
 
     def step(self, batch: Dict[str, torch.tensor]):
-        logits = self(batch)
+        logits, preds = self(batch)
         logits = logits.view(-1, self.hparams.num_labels)
         labels = batch["labels"].view(-1)
-        loss = self.loss_fn(logits, labels)
-        preds = torch.argmax(logits, dim=1)
+        teacher_probs = batch["teacher_probs"]
+        loss = self.loss_fn(logits, teacher_probs, labels)
         return loss, preds
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
@@ -105,14 +107,14 @@ class SequenceClassificationTransformer(LightningModule):
         pass
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        loss, preds = self.step(batch)
-
+        logits, preds = self(batch)
         # log val metrics
         acc = self.val_acc(preds, batch["labels"])
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        # No loss for validation or test because of missing teacher_probs!!
+        # self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=False)
 
-        return {"loss": loss, "preds": preds, "targets": batch["labels"]}
+        return {"preds": preds, "targets": batch["labels"]}
 
     def validation_epoch_end(self, outputs: List[Any]):
         acc = self.val_acc.compute()  # get val accuracy from current epoch
@@ -120,14 +122,15 @@ class SequenceClassificationTransformer(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        loss, preds = self.step(batch)
+        logits, preds = self(batch)
 
         # log test metrics
         acc = self.test_acc(preds, batch["labels"])
-        self.log("test/loss", loss, on_step=False, on_epoch=True)
+        # No loss in test because of missing teacher_probs!!
+        # self.log("test/loss", loss, on_step=False, on_epoch=True)
         self.log("test/acc", acc, on_step=False, on_epoch=True)
 
-        return {"loss": loss, "preds": preds, "targets": batch["labels"]}
+        return {"preds": preds, "targets": batch["labels"]}
 
     def test_epoch_end(self, outputs: List[Any]):
         pass
@@ -165,7 +168,7 @@ class SequenceClassificationTransformer(LightningModule):
         """Prepare optimizer and schedule (linear warmup and decay)"""
 
         no_decay = ["bias", "LayerNorm.weight"]
-        optimizer_grouped_parameters = [
+        optim_groups = [
             {
                 "params": [p for n, p in self.model.named_parameters() if not any(nd in n for nd in no_decay)],
                 "weight_decay": self.hparams.weight_decay,
@@ -176,7 +179,7 @@ class SequenceClassificationTransformer(LightningModule):
             },
         ]
         print(f"{self.hparams.learning_rate =}")
-        optimizer = AdamW(optimizer_grouped_parameters, lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
+        optimizer = AdamW(optim_groups, lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

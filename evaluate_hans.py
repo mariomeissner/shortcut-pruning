@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding
 from tqdm import tqdm
 import torch 
-from .src.models.hf_model import SequenceClassificationTransformer
+from src.models.hf_model import SequenceClassificationTransformer
 
 def evaluate_on_hans(
     module_path: str,
@@ -62,12 +62,13 @@ def evaluate_on_hans(
     for idx, batch in enumerate(tqdm(dataloader)):
         batch = {k: v.to(device) for k, v in batch.items()}
         with torch.no_grad():
-            logits = model(batch)
-            logits = logits.detach().cpu().numpy()
-            preds = np.argmax(logits, axis=1)
+            logits, preds = model(batch)
+            preds = list(preds.detach().cpu())
         predictions.extend(preds)
 
     predictions = np.array(predictions)
+    # In hans, neutral and contradict go together into non-entail
+    predictions[predictions==2] = 1 
     targets = np.array(hans["validation"]["labels"])
 
     accuracy = np.mean(predictions == targets)
