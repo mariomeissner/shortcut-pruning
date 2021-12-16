@@ -12,8 +12,10 @@ hydra:
   # sets output paths for all file logs to `logs/experiment/name'
   run:
     # dir: logs/experiments/${name}/${now:%Y-%m-%d_%H-%M-%S}
-    dir: logs/${name}/${version}
+    # dir: logs/${name}/${version}
+    dir: logs/${name}/
   sweep:
     # dir: logs/experiments/${name}/multirun_${now:%Y-%m-%d_%H-%M-%S}
-    dir: logs/${name}/multirun_${version}
+    # dir: logs/${name}/multirun_${version}
+    dir: logs/${name}/multirun/
     subdir: ${hydra.job.num}

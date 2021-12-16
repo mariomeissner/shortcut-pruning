@@ -16,15 +16,15 @@ log = get_logger(__name__)
 
 
 class PruningTransformer(SequenceClassificationTransformer):
-    def __init__(self, sparse_args: SparseTrainingArguments, freeze_weights: bool):
-        super().__init__()
+    def __init__(self, sparse_args: dict, freeze_weights: bool, **kwargs):
+        super().__init__(**kwargs)
         self.save_hyperparameters()
 
         if self.hparams.huggingface_model != "bert-base-uncased":
             raise ValueError("Only bert-base-uncased is available for prunning.")
 
         self.model_patcher = ModelPatchingCoordinator(
-            sparse_args=self.hparams.sparse_args,
+            sparse_args=SparseTrainingArguments(**self.hparams.sparse_args),
             device=self.device,
             cache_dir="tmp/",  # Used only for teacher
             model_name_or_path=self.hparams.huggingface_model,
@@ -32,9 +32,9 @@ class PruningTransformer(SequenceClassificationTransformer):
             teacher_constructor=None,  # TODO
         )
 
-        self.model_patcher.patch_model(self.model_debias.model)
+        self.model_patcher.patch_model(self.model)
 
-        if self.freeze_weights:
+        if self.hparams.freeze_weights:
             self.freeze_non_mask()
 
     def freeze_non_mask(self):
@@ -42,15 +42,20 @@ class PruningTransformer(SequenceClassificationTransformer):
             if name.split(".")[-1] != "mask_scores":
                 param.requires_grad = False
 
-    def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
+    def forward(self, batch: Dict[str, torch.tensor]):
+        # Overridden to call scheduler
         self.model_patcher.schedule_threshold(
             step=self.global_step,
-            total_step=self.total_train_steps,
+            total_step=self.total_training_steps,
             training=self.training,
         )
+        return super().forward(batch)
+
+    def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
+        
         outputs = super().training_step(batch, batch_idx)
 
-        prune_reg_loss, _, _ = self.model_patcher.regularization_loss(self.model_debias.model)
+        prune_reg_loss, _, _ = self.model_patcher.regularization_loss(self.model)
 
         self.log("train/loss/prune/regularize", prune_reg_loss, prog_bar=False, on_epoch=True, sync_dist=True)
 
@@ -62,7 +67,7 @@ class PruningTransformer(SequenceClassificationTransformer):
 
     def compile_model(self):
         """Returns compiled copy of a debiaed model (NOT in place)."""
-        model = copy.deepcopy(self.model_debias.model)
+        model = copy.deepcopy(self.model)
         removed, heads = self.model_patcher.compile_model(model)
 
         log.info(f"Compiled model. Removed {removed} / {heads} heads.")
@@ -79,7 +84,7 @@ class PruningTransformer(SequenceClassificationTransformer):
 
         optimizer = AdamW(optim_groups)
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=self.warmup_steps, num_training_steps=self.total_train_steps
+            optimizer, num_warmup_steps=self.hparams.warmup_steps, num_training_steps=self.total_training_steps
         )
 
         return {"optimizer": optimizer, "scheduler": scheduler}

@@ -1,6 +1,7 @@
 # @package _global_
 
 defaults:
+  - /pruning: sparse_trainer_args.yaml
   - override /mode: exp.yaml
   - override /trainer: default.yaml
   - override /model: null
@@ -8,19 +9,29 @@ defaults:
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
 
-name: "bert_mnli"
+name: bert_mnli_pruned_freeze=${model.freeze_weights}_epochs=${trainer.max_epochs}_bs=${datamodule.batch_size}
 seed: 42
-test_after_training: False # MNLI cannot be tested, test set labels are hidden
+test_after_training: False # Cannot test on MNLI, test set labels are hidden
+
+prune_block_size: 32
+
+pruning:
+  attention_block_rows: ${prune_block_size}
+  attention_block_cols: ${prune_block_size}
+  regularization_final_lambda: 20
+  final_warmup: 4
 
 model:
-  _target_: src.models.hf_model.SequenceClassificationTransformer
+  _target_: src.models.hf_model_pruned.PruningTransformer
+  loss_fn:
+    _target_: torch.nn.CrossEntropyLoss
   num_labels: 3
+  use_teacher_probs: False
+  sparse_args: ${pruning}
+  freeze_weights: False
   huggingface_model: "bert-base-uncased"
   learning_rate: 3e-5
   batch_size: ${datamodule.batch_size}
-  loss_fn:
-    _target_: torch.nn.CrossEntropyLoss
-  use_teacher_probs: False
 
 datamodule:
   _target_: src.datamodules.hf_datamodule.HFDataModule
@@ -30,6 +41,10 @@ datamodule:
   tokenizer_name: ${model.huggingface_model}
   num_workers: 8
   pin_memory: True
+
+callbacks:
+  model_checkpoint:
+    compile: True
 
 trainer:
   max_epochs: 3

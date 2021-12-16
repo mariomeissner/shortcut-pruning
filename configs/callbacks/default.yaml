@@ -1,5 +1,5 @@
 model_checkpoint:
-  _target_: pytorch_lightning.callbacks.ModelCheckpoint
+  _target_: src.callbacks.hf_checkpoint.ModelCheckpointWithCompiling
   monitor: "val/acc" # name of the logged metric which determines when model is improving
   mode: "max" # "max" means higher metric value is better, can be also "min"
   save_top_k: 0 # save k best models (determined by above metric)

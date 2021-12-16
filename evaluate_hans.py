@@ -12,21 +12,21 @@ from transformers import DataCollatorWithPadding
 from tqdm import tqdm
 import torch 
 from src.models.hf_model import SequenceClassificationTransformer
+from src.models.hf_model_pruned import PruningTransformer
 
 def evaluate_on_hans(
-    module_path: str,
-    class_name: str,
     checkpoint_path: str,
+    pruning_model: bool = False,
     data_path: str = "data/hans-tokenized",
     max_length: int = 128,
 ):
 
-    # Load model
-    # TODO: Fix this, it breaks due to relative import failure (from scripts folder)
-    # module = importlib.import_module(module_path)
-    # model_class : LightningModule = getattr(module, class_name)
-
-    model_class = SequenceClassificationTransformer
+    if pruning_model:
+        print("Loading PruningTransformer instead of the normal one.")
+        model_class = PruningTransformer
+    else:
+        model_class = SequenceClassificationTransformer
+    
     model = model_class.load_from_checkpoint(checkpoint_path)
 
     # Load dataset

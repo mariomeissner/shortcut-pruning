@@ -1,7 +1,10 @@
+import copy
 import inspect
+from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 import torch
+from nn_pruning.patch_coordinator import ModelPatchingCoordinator, SparseTrainingArguments
 from pytorch_lightning import LightningModule
 from torch import nn
 from torchmetrics import MaxMetric
@@ -9,6 +12,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
+from src.utils.utils import get_logger
 
 log = utils.get_logger(__name__)
 
@@ -33,6 +37,7 @@ class SequenceClassificationTransformer(LightningModule):
         huggingface_model: str,
         num_labels: int,
         loss_fn: nn.Module,
+        use_teacher_probs: bool,
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
@@ -87,8 +92,11 @@ class SequenceClassificationTransformer(LightningModule):
         logits, preds = self(batch)
         logits = logits.view(-1, self.hparams.num_labels)
         labels = batch["labels"].view(-1)
-        teacher_probs = batch["teacher_probs"]
-        loss = self.loss_fn(logits, teacher_probs, labels)
+        if self.hparams.use_teacher_probs:
+            teacher_probs = batch["teacher_probs"]
+            loss = self.loss_fn(logits, teacher_probs, labels)
+        else:
+            loss = self.loss_fn(logits, labels)
         return loss, preds
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):

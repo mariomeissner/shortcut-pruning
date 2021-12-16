@@ -1,6 +1,4 @@
 # See more: https://github.com/huggingface/nn_pruning/blob/main/nn_pruning/patch_coordinator.py#L54
-
-__target__: nn_pruning.patch_coordinator.SparseTrainingArguments
 distil_alpha_ce: 0.1
 distil_alpha_teacher: 0.9
 mask_scores_learning_rate: 0.01
@@ -22,3 +20,5 @@ attention_output_with_dense: 0
 layer_norm_patch_steps: 50000  # but layer_norm_patch=False by dafault
 gelu_patch_steps: 50000   # but gelu_patch=False by default
 linear_min_parameters: 0
+ampere_pruning_method: disabled
+regularization_final_lambda: 10

@@ -1,6 +1,8 @@
 # Working folders (remove if you want to publish them!)
 tensorboard
 logs 
+tmp
+nohup.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

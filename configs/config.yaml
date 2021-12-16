@@ -46,6 +46,5 @@ seed: null
 # name of the run is accessed by loggers
 # should be used along with experiment mode
 name: null
-
 # version name is datetime
-version: ${now:%Y-%m-%d_%H-%M-%S}
+# version: ${now:%Y-%m-%d_%H-%M-%S}

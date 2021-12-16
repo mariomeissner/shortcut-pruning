@@ -7,4 +7,4 @@ test_mode: True
 
 hydra:
   run:
-    dir: logs/test/${name}/${version}
+    dir: logs/test/${name}/test/
