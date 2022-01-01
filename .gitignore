@@ -1,5 +1,6 @@
 # Working folders (remove if you want to publish them!)
 tensorboard
+tensorboard.out
 logs 
 tmp
 nohup.out

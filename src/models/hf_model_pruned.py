@@ -16,6 +16,7 @@ log = get_logger(__name__)
 
 
 class PruningTransformer(SequenceClassificationTransformer):
+    
     def __init__(self, sparse_args: dict, freeze_weights: bool, **kwargs):
         super().__init__(**kwargs)
         self.save_hyperparameters()
@@ -46,7 +47,7 @@ class PruningTransformer(SequenceClassificationTransformer):
         # Overridden to call scheduler
         self.model_patcher.schedule_threshold(
             step=self.global_step,
-            total_step=self.total_training_steps,
+            total_step=self.total_training_steps(),
             training=self.training,
         )
         return super().forward(batch)
@@ -84,7 +85,7 @@ class PruningTransformer(SequenceClassificationTransformer):
 
         optimizer = AdamW(optim_groups)
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=self.hparams.warmup_steps, num_training_steps=self.total_training_steps
+            optimizer, num_warmup_steps=self.hparams.warmup_steps, num_training_steps=self.total_training_steps()
         )
 
         return {"optimizer": optimizer, "scheduler": scheduler}

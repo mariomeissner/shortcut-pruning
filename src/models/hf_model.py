@@ -12,7 +12,6 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.utils.utils import get_logger
 
 log = utils.get_logger(__name__)
 
@@ -73,6 +72,8 @@ class SequenceClassificationTransformer(LightningModule):
 
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
+
+        self._total_training_steps = None
 
         # Collect the forward signature
         params = inspect.signature(self.model.forward).parameters.values()
@@ -149,28 +150,46 @@ class SequenceClassificationTransformer(LightningModule):
         self.test_acc.reset()
         self.val_acc.reset()
 
-    @property
     def total_training_steps(self) -> int:
         """Total training steps inferred from datamodule and devices."""
-        if isinstance(self.trainer.limit_train_batches, int) and self.trainer.limit_train_batches != 0:
-            dataset_size = self.trainer.limit_train_batches
-        elif isinstance(self.trainer.limit_train_batches, float):
-            # limit_train_batches is a percentage of batches
-            dataset_size = len(self.trainer.datamodule.train_dataloader())
-            dataset_size = int(dataset_size * self.trainer.limit_train_batches)
+
+        # Special handling for manual evaluation case
+        if getattr(self, "trainer", None) is None:
+            if not self._total_training_steps:
+                log.warn(
+                    "Could not compute total_training_steps, returninng 0 instead."
+                    "This should only happen if you are evaluating with your own prediction loop."
+                    "Make sure to set model.eval() before calling model inference, so that pruning scheduler sets final threshold."
+                )
+                self._total_training_steps = 0
+            return self._total_training_steps
+
+        # Have already computed before
+        if self._total_training_steps:
+            return self._total_training_steps
+        
+        # First call
         else:
-            dataset_size = len(self.trainer.datamodule.train_dataloader())
+            if isinstance(self.trainer.limit_train_batches, int) and self.trainer.limit_train_batches != 0:
+                dataset_size = self.trainer.limit_train_batches
+            elif isinstance(self.trainer.limit_train_batches, float):
+                # limit_train_batches is a percentage of batches
+                dataset_size = len(self.trainer.datamodule.train_dataloader())
+                dataset_size = int(dataset_size * self.trainer.limit_train_batches)
+            else:
+                dataset_size = len(self.trainer.datamodule.train_dataloader())
 
-        num_devices = max(1, self.trainer.num_gpus, self.trainer.num_processes)
-        if self.trainer.tpu_cores:
-            num_devices = max(num_devices, self.trainer.tpu_cores)
+            num_devices = max(1, self.trainer.num_gpus, self.trainer.num_processes)
+            if self.trainer.tpu_cores:
+                num_devices = max(num_devices, self.trainer.tpu_cores)
 
-        effective_batch_size = self.trainer.accumulate_grad_batches * num_devices
-        max_estimated_steps = (dataset_size // effective_batch_size) * self.trainer.max_epochs
+            effective_batch_size = self.trainer.accumulate_grad_batches * num_devices
+            max_estimated_steps = (dataset_size // effective_batch_size) * self.trainer.max_epochs
 
-        if self.trainer.max_steps and 0 < self.trainer.max_steps < max_estimated_steps:
-            return self.trainer.max_steps
-        return max_estimated_steps
+            if self.trainer.max_steps and 0 < self.trainer.max_steps < max_estimated_steps:
+                self._total_training_steps = self.trainer.max_steps
+            self._total_training_steps = max_estimated_steps
+            return self._total_training_steps
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
@@ -192,7 +211,7 @@ class SequenceClassificationTransformer(LightningModule):
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
             num_warmup_steps=self.hparams.warmup_steps,
-            num_training_steps=self.total_training_steps,
+            num_training_steps=self.total_training_steps(),
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         return [optimizer], [scheduler]
