@@ -157,8 +157,8 @@ class SequenceClassificationTransformer(LightningModule):
         if getattr(self, "trainer", None) is None:
             if not self._total_training_steps:
                 log.warn(
-                    "Could not compute total_training_steps, returninng -1 instead."
-                    "This should only happen if you are evaluating with your own prediction loop."
+                    "Could not compute total_training_steps, returninng -1 instead.\n"
+                    "This should only happen if you are evaluating with your own prediction loop.\n"
                     "Make sure to set model.eval() before calling model inference, so that pruning scheduler sets final threshold."
                 )
                 self._total_training_steps = -1

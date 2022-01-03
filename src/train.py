@@ -1,6 +1,10 @@
+from pathlib import Path
 from typing import List, Optional
 
 import hydra
+import torchinfo
+import torch
+import os
 from omegaconf import DictConfig
 from pytorch_lightning import (
     Callback,
@@ -26,6 +30,12 @@ def train(config: DictConfig) -> Optional[float]:
     Returns:
         Optional[float]: Metric score for hyperparameter optimization.
     """
+
+    # If this experiment already exists then warn and exit to avoid overwriting
+    work_dir = Path(config.logger.tensorboard.save_dir) / config.name
+    if os.path.exists(work_dir / config.callbacks.model_checkpoint.dirpath):
+        log.error("This experiment has already been run. Give your experiment a different name!")
+        exit()
 
     # Set seed for random number generators in pytorch, numpy and python.random
     if config.get("seed"):
@@ -57,9 +67,7 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(
-        config.trainer, callbacks=callbacks, logger=logger, _convert_="partial"
-    )
+    trainer: Trainer = hydra.utils.instantiate(config.trainer, callbacks=callbacks, logger=logger, _convert_="partial")
 
     # Send some parameters from config to all lightning loggers
     log.info("Logging hyperparameters!")
@@ -71,6 +79,23 @@ def train(config: DictConfig) -> Optional[float]:
         callbacks=callbacks,
         logger=logger,
     )
+
+    # # Log model summary to file
+    # log.info("Writing model summary to model_summary.txt")
+    # with open(work_dir / "model_summary.txt", "w") as _file:
+    #     _file.write(
+    #         str(
+    #             torchinfo.summary(
+    #                 model.model,
+    #                 verbose=2,
+    #                 input_size=(32, 8),
+    #                 dtypes=[torch.int],
+    #                 depth=99,
+    #                 row_settings=["var_names"],
+    #                 col_names=["kernel_size", "output_size", "num_params"],
+    #             )
+    #         )
+    #     )
 
     # Train the model
     log.info("Starting training!")
