@@ -9,15 +9,22 @@ defaults:
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
 
-name: bert_mnli_pruned_freeze=${model.freeze_weights}_epochs=${trainer.max_epochs}_bs=${datamodule.batch_size}
+name: bert/mnli/pruned/freeze_${model.freeze_weights}/${subname}
+subname: ""
 seed: 42
 test_after_training: False # Cannot test on MNLI, test set labels are hidden
 
 prune_block_size: 32
 
 pruning:
+  mask_scores_learning_rate: 0.01
+  dense_pruning_method: topK:1d_alt
+  attention_pruning_method: topK
   attention_block_rows: ${prune_block_size}
   attention_block_cols: ${prune_block_size}
+  initial_threshold: 1
+  final_threshold: 0.85
+  # what about these?
   regularization_final_lambda: 20
   final_warmup: 4
 
