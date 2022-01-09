@@ -1,32 +1,17 @@
 # @package _global_
 
 defaults:
-  - /pruning: sparse_trainer_args.yaml
+  - override /pruning: unstructured_pruning.yaml
   - override /mode: exp.yaml
   - override /trainer: default.yaml
-  - override /model: null
-  - override /datamodule: null
+  - override /model: null # Full manual configuration
+  - override /datamodule: null # Full manual configuration
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
 
-name: bert/mnli/pruned/freeze_${model.freeze_weights}/${subname}
-subname: ""
+name: bert/mnli/unstructured_pruning/freeze_${model.freeze_weights}/${seed}
 seed: 42
 test_after_training: False # Cannot test on MNLI, test set labels are hidden
-
-prune_block_size: 32
-
-pruning:
-  mask_scores_learning_rate: 0.01
-  dense_pruning_method: topK:1d_alt
-  attention_pruning_method: topK
-  attention_block_rows: ${prune_block_size}
-  attention_block_cols: ${prune_block_size}
-  initial_threshold: 1
-  final_threshold: 0.85
-  # what about these?
-  # regularization_final_lambda: 20
-  # final_warmup: 4
 
 model:
   _target_: src.models.hf_model_pruned.PruningTransformer
@@ -43,7 +28,7 @@ model:
 datamodule:
   _target_: src.datamodules.hf_datamodule.HFDataModule
   dataset_name: "mnli-tokenized"
-  batch_size: 256
+  batch_size: 128
   data_dir: ${data_dir} # data_dir is specified in config.yaml
   tokenizer_name: ${model.huggingface_model}
   num_workers: 8
@@ -54,5 +39,5 @@ callbacks:
     compile: True
 
 trainer:
-  max_epochs: 3
+  max_epochs: 12
   gpus: 1

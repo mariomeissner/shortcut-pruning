@@ -16,8 +16,7 @@ log = get_logger(__name__)
 
 
 class PruningTransformer(SequenceClassificationTransformer):
-    
-    def __init__(self, sparse_args: dict, freeze_weights: bool, **kwargs):
+    def __init__(self, sparse_args: dict, freeze_weights: bool, from_checkpoint: str = None, **kwargs):
         super().__init__(**kwargs)
         self.save_hyperparameters()
 
@@ -53,7 +52,7 @@ class PruningTransformer(SequenceClassificationTransformer):
         return super().forward(batch)
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        
+
         outputs = super().training_step(batch, batch_idx)
 
         prune_reg_loss, _, _ = self.model_patcher.regularization_loss(self.model)

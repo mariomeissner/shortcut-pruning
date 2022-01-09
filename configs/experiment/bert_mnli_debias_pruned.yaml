@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /pruning: sparse_trainer_args.yaml
+  - /pruning: unstructured_pruning.yaml
   - override /mode: exp.yaml
   - override /trainer: default.yaml
   - override /model: null
@@ -9,17 +9,9 @@ defaults:
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
 
-name: bert_mnli_debias_pruned_freeze=${model.freeze_weights}_epochs=${trainer.max_epochs}_bs=${datamodule.batch_size}
+name: bert/mnli/unstructured_pruning/debiased/freeze_${model.freeze_weights}/${seed}
 seed: 42
 test_after_training: False # Cannot test on MNLI, test set labels are hidden
-
-prune_block_size: 32
-
-pruning:
-  attention_block_rows: ${prune_block_size}
-  attention_block_cols: ${prune_block_size}
-  regularization_final_lambda: 20
-  final_warmup: 4
 
 model:
   _target_: src.models.hf_model_pruned.PruningTransformer
@@ -39,7 +31,7 @@ datamodule:
   dataset_name: "mnli-tokenized"
   bias_name: "mnli_shallow_2K_fixed.json"
   tokenizer_name: ${model.huggingface_model}
-  batch_size: 256
+  batch_size: 128
   num_workers: 8
   pin_memory: True
 
@@ -48,5 +40,5 @@ callbacks:
     compile: True
 
 trainer:
-  max_epochs: 3
+  max_epochs: 12
   gpus: 1
