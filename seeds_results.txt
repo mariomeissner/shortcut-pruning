@@ -1,0 +1,109 @@
+MNLI Validation Matched Results
+Vanilla Results
+MNLI Validation Matched Results
+Vanilla Results
+MNLI Validation Matched score: 0.8357615894039735
+MNLI Validation Matched score: 0.838920020376974
+MNLI Validation Matched score: 0.844319918492104
+MNLI Validation Matched score: 0.8471726948548141
+MNLI Validation Matched score: 0.8403464085583291
+MNLI Validation Matched score: 0.8409577177789098
+MNLI Validation Matched score: 0.8366785532348446
+MNLI Validation Matched score: 0.8451349974528782
+MNLI Validation Matched score: 0.841874681609781
+MNLI Validation Matched score: 0.8469689251146205
+Pruning results
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8259806418746816
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8289353031074885
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.31818644931227713
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8205807437595517
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8190524707080998
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8240448293428426
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.826286296484972
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8248599083036169
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8220071319409068
+Loading PruningTransformer instead of the normal one.
+MNLI Validation Matched score: 0.8248599083036169
+
+HANS Results
+Vanilla Results
+Hans total score: 0.5281333333333333.
+Hans entail score: 0.9870666666666666.
+Hans nonentail score: 0.0692.
+Hans total score: 0.5251.
+Hans entail score: 0.9864666666666667.
+Hans nonentail score: 0.06373333333333334.
+Hans total score: 0.5342666666666667.
+Hans entail score: 0.9830666666666666.
+Hans nonentail score: 0.08546666666666666.
+Hans total score: 0.5556333333333333.
+Hans entail score: 0.9846.
+Hans nonentail score: 0.12666666666666668.
+Hans total score: 0.5528333333333333.
+Hans entail score: 0.9852.
+Hans nonentail score: 0.12046666666666667.
+Hans total score: 0.5279333333333334.
+Hans entail score: 0.9798666666666667.
+Hans nonentail score: 0.076.
+Hans total score: 0.5283.
+Hans entail score: 0.9821333333333333.
+Hans nonentail score: 0.07446666666666667.
+Hans total score: 0.5593333333333333.
+Hans entail score: 0.9822.
+Hans nonentail score: 0.13646666666666665.
+Hans total score: 0.5812333333333334.
+Hans entail score: 0.9766.
+Hans nonentail score: 0.18586666666666668.
+Hans total score: 0.5566333333333333.
+Hans entail score: 0.9806666666666667.
+Hans nonentail score: 0.1326.
+Pruning results
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6417.
+Hans entail score: 0.9792.
+Hans nonentail score: 0.3042.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6427666666666667.
+Hans entail score: 0.9883333333333333.
+Hans nonentail score: 0.2972.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.5.
+Hans entail score: 0.0.
+Hans nonentail score: 1.0.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6205333333333334.
+Hans entail score: 0.9756.
+Hans nonentail score: 0.2654666666666667.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.5974333333333334.
+Hans entail score: 0.9778666666666667.
+Hans nonentail score: 0.217.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.5915.
+Hans entail score: 0.9696.
+Hans nonentail score: 0.2134.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6319333333333333.
+Hans entail score: 0.9694.
+Hans nonentail score: 0.29446666666666665.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.5794666666666667.
+Hans entail score: 0.9966.
+Hans nonentail score: 0.16233333333333333.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6497333333333334.
+Hans entail score: 0.9675333333333334.
+Hans nonentail score: 0.33193333333333336.
+Loading PruningTransformer instead of the normal one.
+Hans total score: 0.6135333333333334.
+Hans entail score: 0.977.
+Hans nonentail score: 0.25006666666666666.

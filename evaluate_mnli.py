@@ -17,6 +17,7 @@ from src.models.hf_model_pruned import PruningTransformer
 def evaluate_on_mnli(
     checkpoint_path: str,
     pruned_model: bool = False,
+    do_mismatched: bool = False,
     data_path: str = "data/mnli-tokenized",
     max_length: int = 128,
     batch_size: int = 256,
@@ -76,18 +77,19 @@ def evaluate_on_mnli(
     print(f"MNLI Validation Matched score: {accuracy}")
 
     # Run mismatched evaluation
-    predictions = []
-    for idx, batch in enumerate(tqdm(mismatched_dataloader)):
-        batch = {k: v.to(device) for k, v in batch.items()}
-        with torch.no_grad():
-            logits, preds = model(batch)
-            preds = list(preds.detach().cpu())
-        predictions.extend(preds)
+    if do_mismatched:
+        predictions = []
+        for idx, batch in enumerate(tqdm(mismatched_dataloader)):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                logits, preds = model(batch)
+                preds = list(preds.detach().cpu())
+            predictions.extend(preds)
 
-    predictions = np.array(predictions)
-    targets = np.array(mnli["validation_mismatched"]["labels"])
-    accuracy = np.mean(predictions == targets)
-    print(f"MNLI Validation Mismatched score: {accuracy}")
+        predictions = np.array(predictions)
+        targets = np.array(mnli["validation_mismatched"]["labels"])
+        accuracy = np.mean(predictions == targets)
+        print(f"MNLI Validation Mismatched score: {accuracy}")
 
 
 if __name__ == "__main__":

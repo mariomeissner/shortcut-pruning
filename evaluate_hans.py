@@ -17,7 +17,6 @@ from src.models.hf_model_pruned import PruningTransformer
 def evaluate_on_hans(
     checkpoint_path: str,
     pruned_model: bool = False,
-    data_path: str = "data/hans-tokenized",
     max_length: int = 128,
 ):
 

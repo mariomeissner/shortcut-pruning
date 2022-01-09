@@ -17,5 +17,6 @@ hydra:
   sweep:
     # dir: logs/experiments/${name}/multirun_${now:%Y-%m-%d_%H-%M-%S}
     # dir: logs/${name}/multirun_${version}
-    dir: logs/${name}/multirun/
-    subdir: ${hydra.job.num}
+    # I like to keep multiruns in the same space as single runs (makes tensorboard easier too)
+    dir: logs/${name}
+    subdir: "" # Without this, a subfolder with job.num is created
