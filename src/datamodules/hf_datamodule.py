@@ -1,5 +1,5 @@
 from argparse import ArgumentError
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import os
 import torch
@@ -19,6 +19,9 @@ class HFDataModule(LightningDataModule):
     Requires a pre-processed (tokenized, cleaned...) dataset provided within the `data` folder.
     Might require adjustments if your dataset doesn't follow the structure of SNLI or MNLI.
 
+    Pass a (group, set_name) tuple to `dataset_name` if your dataset is part of a group such as glue.
+    For example, for MNLI, use ('glue', 'mnli').
+
     A DataModule implements 5 key methods:
         - prepare_data (things to do on 1 GPU/TPU, not on every GPU/TPU in distributed mode)
         - setup (things to do on every accelerator in distributed mode)
@@ -35,12 +38,14 @@ class HFDataModule(LightningDataModule):
 
     def __init__(
         self,
-        data_dir: str,
         dataset_name: str,
+        subdataset_name: str,
         tokenizer_name: str,
+        sentence_1_name: str,
+        sentence_2_name: str,
         batch_size: int = 64,
         max_length: int = 128,
-        num_workers: int = 0,
+        num_workers: int = 4,
         pin_memory: bool = False,
     ):
         super().__init__()
@@ -56,11 +61,12 @@ class HFDataModule(LightningDataModule):
         self.eval_key = "validation"
         self.test_key = "test"
 
-        if "mnli" in dataset_name:
+        # Manual fix for special MNLI treatment
+        if self.hparams.subdataset_name == "mnli":
             self.eval_key += "_matched"
             self.test_key += "_matched"
 
-        self.keep_columns=[
+        self.keep_columns = [
             "idx",
             "input_ids",
             "attention_mask",
@@ -76,13 +82,10 @@ class HFDataModule(LightningDataModule):
 
     def prepare_data(self):
         """
-        We should not assign anything here, so this function simply ensures
-        that the pre-processed data is available.
+        We should not assign anything here, so this function simply caches the tokenizer and dataset.
         """
-        self.dataset_path = Path(self.hparams.data_dir) / self.hparams.dataset_name
-        if not os.path.exists(self.dataset_path):
-            raise ValueError("The provided folder does not exist.")
-        AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)  # TODO: Load according to model-name
+        AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
+        datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -90,15 +93,32 @@ class HFDataModule(LightningDataModule):
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
 
         if not self.tokenizer:
-            # TODO: Load according to model-name
             self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
 
         if not self.collator_fn:
             self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer)
 
         if not self.dataset:
-            self.dataset = datasets.load_from_disk(self.dataset_path)
-            keep_columns = [column for column in self.keep_columns if column in self.dataset['train'].column_names]
+            self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+
+            def preprocess_function(examples: dict):
+                # TODO: support the case of one-sentence only
+                sents = (examples[self.hparams.sentence_1_name], examples[self.hparams.sentence_2_name])
+                result = self.tokenizer(*sents, max_length=self.hparams.max_length, truncation="longest_first")
+                return result
+
+            # Rename label to labels for consistency
+            if "label" in self.dataset.column_names["train"]:
+                self.dataset = self.dataset.rename_column("label", "labels")
+
+            # Apply tokenization and filter out invalid labels
+            self.dataset = self.dataset.map(preprocess_function, batched=True, num_proc=self.hparams.num_workers)
+            self.dataset = self.dataset.filter(lambda sample: sample["labels"] != -1)
+
+            # Remove all unnecessary columns
+            keep_columns = [column for column in self.keep_columns if column in self.dataset["train"].column_names]
+
+            # Set torch format
             self.dataset.set_format("torch", columns=keep_columns)
 
     def train_dataloader(self):

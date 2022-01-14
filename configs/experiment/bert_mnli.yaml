@@ -8,14 +8,14 @@ defaults:
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
 
-name: "bert_mnli"
+name: bert_mnli
 seed: 42
 test_after_training: False # MNLI cannot be tested, test set labels are hidden
 
 model:
   _target_: src.models.hf_model.SequenceClassificationTransformer
   num_labels: 3
-  huggingface_model: "bert-base-uncased"
+  huggingface_model: bert-base-uncased
   learning_rate: 3e-5
   batch_size: ${datamodule.batch_size}
   loss_fn:
@@ -24,10 +24,12 @@ model:
 
 datamodule:
   _target_: src.datamodules.hf_datamodule.HFDataModule
-  dataset_name: "mnli-tokenized"
-  batch_size: 256
-  data_dir: ${data_dir} # data_dir is specified in config.yaml
+  dataset_name: glue
+  subdataset_name: mnli
   tokenizer_name: ${model.huggingface_model}
+  sentence_1_name: premise
+  sentence_2_name: hypothesis
+  batch_size: 128
   num_workers: 8
   pin_memory: True
 
