@@ -21,7 +21,12 @@ class PruningTransformer(SequenceClassificationTransformer):
         self.save_hyperparameters()
 
         if self.hparams.huggingface_model != "bert-base-uncased":
-            raise ValueError("Only bert-base-uncased is available for prunning.")
+            raise ValueError("Only bert-base-uncased is available for pruning.")
+
+        if self.hparams.from_checkpoint is not None:
+            log.info(f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}")
+            checkpoint = torch.load(self.hparams.from_checkpoint)
+            self.load_state_dict(checkpoint["state_dict"])
 
         self.model_patcher = ModelPatchingCoordinator(
             sparse_args=SparseTrainingArguments(**self.hparams.sparse_args),
