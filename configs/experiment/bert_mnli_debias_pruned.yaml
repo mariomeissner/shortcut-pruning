@@ -20,7 +20,7 @@ model:
   num_labels: 3
   use_teacher_probs: True
   sparse_args: ${pruning}
-  freeze_weights: False
+  freeze_weights: True
   huggingface_model: "bert-base-uncased"
   learning_rate: 3e-5
   batch_size: ${datamodule.batch_size}
