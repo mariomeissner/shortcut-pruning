@@ -18,6 +18,7 @@ def evaluate_on_hans(
     checkpoint_path: str,
     pruned_model: bool = False,
     max_length: int = 128,
+    batch_size: int = 256,
 ):
 
     if pruned_model:
@@ -49,7 +50,7 @@ def evaluate_on_hans(
         ],
     )
     dataloader = DataLoader(
-        hans["validation"], batch_size=64, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
+        hans["validation"], batch_size=batch_size, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
     )
 
     model.eval()
