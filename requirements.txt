@@ -9,6 +9,9 @@ torchinfo
 # ------- huggingface ------- #
 transformers==4.12.5
 datasets==1.16.1
+# nn_pruning for pruning models
+# using @kainoj's branch for automodel fix
+git+https://github.com/kainoj/nn_pruning.git@automodel
 
 # --------- hydra --------- #
 hydra-core==1.1.0
