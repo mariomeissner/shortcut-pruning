@@ -5,8 +5,8 @@ defaults:
   - override /trainer: default.yaml
   - override /model: null
   - override /datamodule: null
-  - override /callbacks: default.yaml
-  - override /logger: tensorboard.yaml
+  - override /callbacks: custom.yaml
+  - override /logger: wandb.yaml
 
 name: bert_mnli
 seed: 42

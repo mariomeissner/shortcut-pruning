@@ -31,11 +31,11 @@ def train(config: DictConfig) -> Optional[float]:
         Optional[float]: Metric score for hyperparameter optimization.
     """
 
-    # If this experiment already exists then warn and exit to avoid overwriting
-    work_dir = Path(config.logger.tensorboard.save_dir) / config.name
-    if os.path.exists(work_dir / config.callbacks.model_checkpoint.dirpath):
-        log.error("This experiment has already been run. Give your experiment a different name!")
-        exit()
+    # # If this experiment already exists then warn and exit to avoid overwriting
+    # work_dir = Path(config.logger.tensorboard.save_dir) / config.name
+    # if os.path.exists(work_dir / config.callbacks.model_checkpoint.dirpath):
+    #     log.error("This experiment has already been run. Give your experiment a different name!")
+    #     exit()
 
     # Set seed for random number generators in pytorch, numpy and python.random
     if config.get("seed"):

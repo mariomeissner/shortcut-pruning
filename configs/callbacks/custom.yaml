@@ -1,0 +1,37 @@
+model_checkpoint:
+  _target_: src.callbacks.hf_checkpoint.ModelCheckpointWithCompiling
+  monitor: null # only save last epoch model
+  save_top_k: 0 # only save last epoch model
+  save_last: True # last epoch model
+  verbose: False
+  dirpath: "./" # save "last.ckpt" into the experiment directory
+
+model_summary:
+  _target_: pytorch_lightning.callbacks.ModelSummary
+  max_depth: 1
+
+rich_progress_bar:
+  _target_: pytorch_lightning.callbacks.RichProgressBar
+
+lr_monitor:
+  _target_: pytorch_lightning.callbacks.LearningRateMonitor
+  logging_interval: step
+
+defaults:
+  - default.yaml
+
+watch_model:
+  _target_: src.callbacks.wandb_callbacks.WatchModel
+  log: "all"
+  log_freq: 100
+
+upload_code_as_artifact:
+  _target_: src.callbacks.wandb_callbacks.UploadCodeAsArtifact
+  code_dir: ${work_dir}/src
+  use_git: True
+
+log_f1_precision_recall_heatmap:
+  _target_: src.callbacks.wandb_callbacks.LogF1PrecRecHeatmap
+
+log_confusion_matrix:
+  _target_: src.callbacks.wandb_callbacks.LogConfusionMatrix

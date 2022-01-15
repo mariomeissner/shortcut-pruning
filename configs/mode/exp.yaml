@@ -9,14 +9,11 @@ experiment_mode: True
 name: ???
 
 hydra:
-  # sets output paths for all file logs to `logs/experiment/name'
+  # sets output paths for all file logs to `logs//name'
+  # in this configuration, you are required to set a unique name for each experiment you run
   run:
-    # dir: logs/experiments/${name}/${now:%Y-%m-%d_%H-%M-%S}
-    # dir: logs/${name}/${version}
     dir: logs/${name}/
   sweep:
-    # dir: logs/experiments/${name}/multirun_${now:%Y-%m-%d_%H-%M-%S}
-    # dir: logs/${name}/multirun_${version}
     # I like to keep multiruns in the same space as single runs (makes tensorboard easier too)
-    dir: logs/${name}
-    subdir: "" # Without this, a subfolder with job.num is created
+    dir: logs/${name}/
+    subdir: "" # Without this, a subfolder with job.num is created, which I don't want

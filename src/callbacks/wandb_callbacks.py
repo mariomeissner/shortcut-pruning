@@ -12,6 +12,10 @@ from pytorch_lightning.utilities import rank_zero_only
 from sklearn import metrics
 from sklearn.metrics import f1_score, precision_score, recall_score
 
+from src.utils.utils import get_logger
+
+log = get_logger(__name__)
+
 
 def get_wandb_logger(trainer: Trainer) -> WandbLogger:
     """Safely get Weights&Biases logger from Trainer."""
@@ -29,9 +33,7 @@ def get_wandb_logger(trainer: Trainer) -> WandbLogger:
             if isinstance(logger, WandbLogger):
                 return logger
 
-    raise Exception(
-        "You are using wandb related callback, but WandbLogger was not found for some reason..."
-    )
+    raise Exception("You are using wandb related callback, but WandbLogger was not found for some reason...")
 
 
 class WatchModel(Callback):
@@ -63,6 +65,8 @@ class UploadCodeAsArtifact(Callback):
 
     @rank_zero_only
     def on_train_start(self, trainer, pl_module):
+
+        log.info("Logging code as artifact.")
         logger = get_wandb_logger(trainer=trainer)
         experiment = logger.experiment
 
@@ -70,9 +74,10 @@ class UploadCodeAsArtifact(Callback):
 
         if self.use_git:
             # get .git folder path
-            git_dir_path = Path(
-                subprocess.check_output(["git", "rev-parse", "--git-dir"]).strip().decode("utf8")
-            ).resolve()
+            # git_dir_path = Path(
+            #     subprocess.check_output(["git", "rev-parse", "--git-dir"]).strip().decode("utf8")
+            # ).resolve()
+            git_dir_path = ".git"
 
             for path in Path(self.code_dir).resolve().rglob("*"):
 
@@ -91,6 +96,7 @@ class UploadCodeAsArtifact(Callback):
             for path in Path(self.code_dir).resolve().rglob("*.py"):
                 code.add_file(str(path), name=str(path.relative_to(self.code_dir)))
 
+        log.info("Found the following files as code artifacts:\n{code}")
         experiment.log_artifact(code)
 
 
@@ -138,9 +144,7 @@ class LogConfusionMatrix(Callback):
         """Start executing this callback only after all validation sanity checks end."""
         self.ready = True
 
-    def on_validation_batch_end(
-        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
-    ):
+    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         """Gather data from single batch."""
         if self.ready:
             self.preds.append(outputs["preds"])
@@ -196,9 +200,7 @@ class LogF1PrecRecHeatmap(Callback):
         """Start executing this callback only after all validation sanity checks end."""
         self.ready = True
 
-    def on_validation_batch_end(
-        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
-    ):
+    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         """Gather data from single batch."""
         if self.ready:
             self.preds.append(outputs["preds"])
