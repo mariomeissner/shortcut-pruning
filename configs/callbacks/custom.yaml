@@ -28,7 +28,7 @@ watch_model:
 upload_code_as_artifact:
   _target_: src.callbacks.wandb_callbacks.UploadCodeAsArtifact
   code_dir: ${work_dir}/src
-  use_git: True
+  use_git: False
 
 log_f1_precision_recall_heatmap:
   _target_: src.callbacks.wandb_callbacks.LogF1PrecRecHeatmap

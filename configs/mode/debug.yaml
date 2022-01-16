@@ -5,16 +5,18 @@
 
 defaults:
   - override /trainer: debug.yaml
+  - override /logger: none.yaml
+  - override /callbacks: none.yaml
 
 debug_mode: True
 
 hydra:
   # sets level of all command line loggers to 'DEBUG'
-  verbose: True
+  # verbose: True Something causes a huge amount of log output, I think it's this
 
   # https://hydra.cc/docs/tutorials/basic/running_your_app/logging/
   # use this to set level of only chosen command line loggers to 'DEBUG'
-  # verbose: [src.train, src.utils.utils]
+  verbose: [src.train, src.utils.utils]
 
   # sets output paths for all file logs to 'logs/debug/'
   run:
