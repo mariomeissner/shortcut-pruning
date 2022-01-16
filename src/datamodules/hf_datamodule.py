@@ -4,6 +4,7 @@ from typing import Optional, Tuple, Union
 import os
 import torch
 import datasets
+from datasets.dataset_dict import DatasetDict
 from pathlib import Path
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
@@ -11,6 +12,9 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers import DataCollatorWithPadding
+from src.utils.utils import get_logger
+
+log = get_logger(__name__)
 
 
 class HFDataModule(LightningDataModule):
@@ -50,6 +54,9 @@ class HFDataModule(LightningDataModule):
     ):
         super().__init__()
 
+        # Explicitly allow tokenizers to parallelize
+        os.environ["TOKENIZERS_PARALLELISM"] = "TRUE"
+
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
@@ -78,6 +85,7 @@ class HFDataModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
+        # TODO: Make general?
         return 3
 
     def prepare_data(self):
@@ -86,6 +94,31 @@ class HFDataModule(LightningDataModule):
         """
         AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
         datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+
+    @staticmethod
+    def process_data(dataset: DatasetDict, keep_columns, **fn_kwargs):
+        log.info("Processing dataset.")
+        # Rename label to labels for consistency
+        if "label" in dataset.column_names["train"]:
+            dataset = dataset.rename_column("label", "labels")
+
+        # Apply tokenization and filter out invalid labels
+        dataset = dataset.map(HFDataModule.map_func, batched=True, num_proc=4, fn_kwargs=fn_kwargs)
+        dataset = dataset.filter(lambda sample: sample["labels"] != -1)
+
+        # Remove all unnecessary columns
+        keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
+
+        # Set torch format
+        dataset.set_format("torch", columns=keep_columns)
+        return dataset
+
+    @staticmethod
+    def map_func(example_batch, sentence_1_name, sentence_2_name, tokenizer, max_length):
+        # TODO: Allow support for single sentence
+        sents = (example_batch[sentence_1_name], example_batch[sentence_2_name])
+        result = tokenizer(*sents, max_length=max_length, truncation="longest_first")
+        return result
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -100,26 +133,14 @@ class HFDataModule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
-
-            def preprocess_function(examples: dict):
-                # TODO: support the case of one-sentence only
-                sents = (examples[self.hparams.sentence_1_name], examples[self.hparams.sentence_2_name])
-                result = self.tokenizer(*sents, max_length=self.hparams.max_length, truncation="longest_first")
-                return result
-
-            # Rename label to labels for consistency
-            if "label" in self.dataset.column_names["train"]:
-                self.dataset = self.dataset.rename_column("label", "labels")
-
-            # Apply tokenization and filter out invalid labels
-            self.dataset = self.dataset.map(preprocess_function, batched=True, num_proc=self.hparams.num_workers)
-            self.dataset = self.dataset.filter(lambda sample: sample["labels"] != -1)
-
-            # Remove all unnecessary columns
-            keep_columns = [column for column in self.keep_columns if column in self.dataset["train"].column_names]
-
-            # Set torch format
-            self.dataset.set_format("torch", columns=keep_columns)
+            self.dataset = HFDataModule.process_data(
+                self.dataset,
+                self.keep_columns,
+                sentence_1_name=self.hparams.sentence_1_name,
+                sentence_2_name=self.hparams.sentence_2_name,
+                tokenizer=self.tokenizer,
+                max_length=self.hparams.max_length,
+            )
 
     def train_dataloader(self):
         return DataLoader(
