@@ -1,19 +1,17 @@
 # @package _global_
 
-# run in experiment mode with:
-# `python run.py mode=exp name=experiment_name`
+# experiment mode sets name of the logging folder to the experiment name
+# can also be used to name the run in the logger
+# example usage:
+# `python run.py mode=exp name=some_name`
 
 experiment_mode: True
 
-# allows for custom naming of the experiment
 name: ???
 
 hydra:
-  # sets output paths for all file logs to `logs//name'
-  # in this configuration, you are required to set a unique name for each experiment you run
   run:
-    dir: logs/${name}/
+    dir: logs/experiments/${name}/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    # I like to keep multiruns in the same space as single runs (makes tensorboard easier too)
-    dir: logs/${name}/
-    subdir: "" # Without this, a subfolder with job.num is created, which I don't want
+    dir: logs/experiments/${name}/multiruns/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
