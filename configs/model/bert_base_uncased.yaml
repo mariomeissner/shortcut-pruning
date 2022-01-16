@@ -4,3 +4,6 @@ num_labels: null # Override me in your experiment config!
 huggingface_model: "bert-base-uncased"
 learning_rate: 3e-5
 batch_size: ${datamodule.batch_size}
+loss_fn:
+  _target_: torch.nn.CrossEntropyLoss
+use_teacher_probs: False
