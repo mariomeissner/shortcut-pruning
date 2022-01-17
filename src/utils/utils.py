@@ -1,3 +1,4 @@
+import os
 import logging
 import warnings
 from typing import List, Sequence
@@ -82,6 +83,7 @@ def print_config(
         "test_after_training",
         "seed",
         "name",
+        "work_dir",
     ),
     resolve: bool = True,
 ) -> None:
@@ -148,6 +150,9 @@ def log_hyperparameters(
     hparams["model/params/non_trainable"] = sum(
         p.numel() for p in model.parameters() if not p.requires_grad
     )
+
+    # save model path
+    hparams["path"] = os.getcwd()
 
     # send hparams to all loggers
     trainer.logger.log_hyperparams(hparams)

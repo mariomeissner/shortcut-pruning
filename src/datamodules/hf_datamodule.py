@@ -44,6 +44,7 @@ class HFDataModule(LightningDataModule):
         self,
         dataset_name: str,
         subdataset_name: str,
+        num_labels: int,
         tokenizer_name: str,
         sentence_1_name: str,
         sentence_2_name: str,
@@ -85,8 +86,7 @@ class HFDataModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
-        # TODO: Make general?
-        return 3
+        return self.hparams.num_labels
 
     def prepare_data(self):
         """
