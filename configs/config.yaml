@@ -4,16 +4,16 @@
 defaults:
   - _self_
   - trainer: default.yaml
-  - model: mnist_model.yaml
-  - datamodule: mnist_datamodule.yaml
-  - callbacks: default.yaml
-  - logger: tensorboard.yaml
-
-  - mode: default.yaml
+  - model: bert_base_uncased.yaml
+  - datamodule: mnli.yaml
+  - callbacks: custom.yaml
+  - logger: wandb.yaml
+  - log_dir: default.yaml
 
   - experiment: null
   - hparams_search: null
-
+  - debug: null
+  
   # optional local config
   - optional local: default.yaml
 
@@ -45,6 +45,6 @@ seed: null
 
 # name of the run is accessed by loggers
 # should be used along with experiment mode
-name: null
+name: ???
 # version name is datetime
 # version: ${now:%Y-%m-%d_%H-%M-%S}

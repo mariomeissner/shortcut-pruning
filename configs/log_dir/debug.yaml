@@ -1,0 +1,8 @@
+hydra:
+  # sets output paths for all file logs to 'logs/debug/'
+  run:
+    dir: logs/debug/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: logs/debug/multiruns/${now:%Y-%m-%d}/${%H-%M-%S}
+    subdir: ${hydra.job.num}
+
