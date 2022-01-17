@@ -9,6 +9,7 @@ defaults:
   - callbacks: custom.yaml
   - logger: wandb.yaml
   - log_dir: default.yaml
+  - pruning: null
 
   - experiment: null
   - hparams_search: null

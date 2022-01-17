@@ -1,3 +1,5 @@
+# @package _global_
+
 hydra:
   # sets output paths for all file logs to 'logs/debug/'
   run:
