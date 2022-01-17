@@ -1,12 +1,8 @@
 # @package _global_
 
 defaults:
-  - override /mode: exp.yaml
-  - override /trainer: default.yaml
   - override /model: bert_base_uncased.yaml
   - override /datamodule: mnli.yaml
-  - override /callbacks: custom.yaml
-  - override /logger: wandb.yaml
 
 name: baselines/bert/mnli
 seed: 888

@@ -1,10 +1,11 @@
-datamodule:
-  _target_: src.datamodules.hf_datamodule.HFDataModule
-  dataset_name: glue
-  subdataset_name: mnli
-  tokenizer_name: ${model.huggingface_model}
-  sentence_1_name: premise
-  sentence_2_name: hypothesis
-  batch_size: 128
-  num_workers: 8
-  pin_memory: True
+_target_: src.datamodules.hf_datamodule.HFDataModule
+
+dataset_name: glue
+subdataset_name: mnli
+num_labels: 3
+tokenizer_name: ${model.huggingface_model}
+sentence_1_name: premise
+sentence_2_name: hypothesis
+batch_size: 128
+num_workers: 8
+pin_memory: True
