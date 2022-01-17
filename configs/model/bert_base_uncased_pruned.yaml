@@ -1,7 +1,11 @@
 _target_: src.models.hf_model_pruned.PruningTransformer
 
-num_labels: null # Override me in your experiment config!
+num_labels: ${datamodule.num_labels}
 huggingface_model: "bert-base-uncased"
 learning_rate: 3e-5
 batch_size: ${datamodule.batch_size}
+loss_fn:
+  _target_: torch.nn.CrossEntropyLoss
+use_teacher_probs: False
 freeze_weights: False
+sparse_args: ${pruning}

@@ -2,42 +2,20 @@
 
 defaults:
   - override /pruning: unstructured_pruning.yaml
-  - override /mode: exp.yaml
-  - override /trainer: default.yaml
-  - override /model: null # Full manual configuration
-  - override /datamodule: null # Full manual configuration
-  - override /callbacks: default.yaml
-  - override /logger: tensorboard.yaml
+  - override /model: bert_base_uncased_pruned.yaml
+  - override /datamodule: mnli.yaml
 
-name: bert/mnli/unstructured_pruning/freeze_${model.freeze_weights}/${seed}
-seed: 42
+name: pruning/unstructured/bert/mnli
+seed: 888
 test_after_training: False # Cannot test on MNLI, test set labels are hidden
 
-model:
-  _target_: src.models.hf_model_pruned.PruningTransformer
-  loss_fn:
-    _target_: torch.nn.CrossEntropyLoss
-  num_labels: 3
-  use_teacher_probs: False
-  sparse_args: ${pruning}
-  freeze_weights: True
-  huggingface_model: "bert-base-uncased"
-  learning_rate: 3e-5
-  batch_size: ${datamodule.batch_size}
-
-datamodule:
-  _target_: src.datamodules.hf_datamodule.HFDataModule
-  dataset_name: "mnli-tokenized"
-  batch_size: 128
-  data_dir: ${data_dir} # data_dir is specified in config.yaml
-  tokenizer_name: ${model.huggingface_model}
-  num_workers: 8
-  pin_memory: True
+pruning:
+  final_threshold: 0.85
 
 callbacks:
   model_checkpoint:
     compile: True
 
 trainer:
-  max_epochs: 12
+  max_epochs: 3
   gpus: 1
