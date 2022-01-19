@@ -8,8 +8,6 @@ max_epochs: 3
 
 val_check_interval: 0.5
 
-auto_select_gpus: True
-
 progress_bar_refresh_rate: 5
 resume_from_checkpoint: null
 

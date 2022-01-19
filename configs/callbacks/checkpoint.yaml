@@ -1,13 +1,10 @@
 model_checkpoint:
-  _target_: pytorch_lightning.callbacks.ModelCheckpoint
-  monitor: "val/acc" # name of the logged metric which determines when model is improving
-  mode: "max" # "max" means higher metric value is better, can be also "min"
-  save_top_k: 0 # save k best models (determined by above metric)
-  save_last: True # additionaly always save model from last epoch
+  _target_: src.callbacks.hf_checkpoint.ModelCheckpointWithCompiling
+  monitor: null # only save last epoch model
+  save_top_k: 0 # only save last epoch model
+  save_last: True # last epoch model
   verbose: False
-  dirpath: "checkpoints/"
-  filename: "epoch_{epoch:03d}"
-  auto_insert_metric_name: False
+  dirpath: "./" # save "last.ckpt" into the experiment directory
   
 rich_progress_bar:
   _target_: pytorch_lightning.callbacks.RichProgressBar

@@ -1,4 +1,4 @@
-_target_: src.datamodules.hf_datamodule.HFDataModule
+_target_: src.datamodules.hf_bias_datamodule.HFBiasDataModule
 
 dataset_name: glue
 subdataset_name: mnli
@@ -11,3 +11,5 @@ test_subset_name: "test_matched"
 batch_size: 128
 num_workers: 8
 pin_memory: True
+
+bias_path: mnli_shallow_2K_fixed.json
