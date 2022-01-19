@@ -48,6 +48,8 @@ class HFDataModule(LightningDataModule):
         tokenizer_name: str,
         sentence_1_name: str,
         sentence_2_name: str,
+        val_subset_name: str = "validation",
+        test_subset_name: str = "test",
         batch_size: int = 64,
         max_length: int = 128,
         num_workers: int = 4,
@@ -66,22 +68,12 @@ class HFDataModule(LightningDataModule):
         self.tokenizer = None
         self.collator_fn = None
 
-        self.eval_key = "validation"
-        self.test_key = "test"
-
-        # Manual fix for special MNLI treatment
-        if self.hparams.subdataset_name == "mnli":
-            self.eval_key += "_matched"
-            self.test_key += "_matched"
-
         self.keep_columns = [
             "idx",
             "input_ids",
             "attention_mask",
             "token_type_ids",
             "labels",
-            "bias",
-            "teacher_probs",
         ]
 
     @property
@@ -96,13 +88,19 @@ class HFDataModule(LightningDataModule):
         datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
 
     @staticmethod
-    def process_data(dataset: DatasetDict, keep_columns, **fn_kwargs):
+    def process_data(dataset: DatasetDict, keep_columns, hparams, tokenizer):
         log.info("Processing dataset.")
         # Rename label to labels for consistency
         if "label" in dataset.column_names["train"]:
             dataset = dataset.rename_column("label", "labels")
 
         # Apply tokenization and filter out invalid labels
+        fn_kwargs = {
+            "sentence_1_name": hparams.sentence_1_name,
+            "sentence_2_name": hparams.sentence_2_name,
+            "tokenizer": tokenizer,
+            "max_length": hparams.max_length,
+        }
         dataset = dataset.map(HFDataModule.map_func, batched=True, num_proc=4, fn_kwargs=fn_kwargs)
         dataset = dataset.filter(lambda sample: sample["labels"] != -1)
 
@@ -133,13 +131,19 @@ class HFDataModule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
-            self.dataset = HFDataModule.process_data(
+            # Rename special subset names, while also getting rid of unwanted subsets
+            self.dataset = DatasetDict(
+                {
+                    "train": self.dataset["train"],
+                    "validation": self.dataset[self.hparams.val_subset_name],
+                    "test": self.dataset[self.hparams.test_subset_name],
+                }
+            )
+            self.dataset = self.process_data(
                 self.dataset,
                 self.keep_columns,
-                sentence_1_name=self.hparams.sentence_1_name,
-                sentence_2_name=self.hparams.sentence_2_name,
                 tokenizer=self.tokenizer,
-                max_length=self.hparams.max_length,
+                hparams=self.hparams,
             )
 
     def train_dataloader(self):
@@ -154,7 +158,7 @@ class HFDataModule(LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            dataset=self.dataset[self.eval_key],
+            dataset=self.dataset["validation"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
@@ -164,7 +168,7 @@ class HFDataModule(LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(
-            dataset=self.dataset[self.test_key],
+            dataset=self.dataset["test"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
