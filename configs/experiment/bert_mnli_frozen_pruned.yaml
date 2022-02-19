@@ -5,12 +5,15 @@ defaults:
   - override /model: bert_base_uncased_pruned.yaml
   - override /datamodule: mnli.yaml
 
-name: pruning/unstructured/bert/mnli
+name: frozen_pruning/unstructured/bert/mnli
 seed: 888
 test_after_training: false # Cannot test on MNLI, test set labels are hidden
 
 model:
-  freeze_weights: false
+  freeze_weights: true
+
+datamodule:
+  batch_size: 32
 
 pruning:
   final_threshold: 0.85
@@ -20,5 +23,5 @@ callbacks:
     compile: True
 
 trainer:
-  max_epochs: 3
+  max_epochs: 12
   gpus: 1
