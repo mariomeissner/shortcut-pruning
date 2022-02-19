@@ -1,10 +1,11 @@
+import os
 from pathlib import Path
 from typing import List, Optional
 
 import hydra
-import torchinfo
 import torch
-import os
+import torchinfo
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 from pytorch_lightning import (
     Callback,
@@ -67,6 +68,24 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
+
+    if config.get("batched_gpus"):
+
+        hydra_conf = HydraConfig.get()
+        if hydra_conf.sweeper.get("max_batch_size"):
+            batch_size = hydra_conf.sweeper.max_batch_size
+        elif hydra_conf.sweeper.get("n_jobs"):
+            batch_size = hydra_conf.sweeper.n_jobs
+        else:
+            raise RuntimeError("Tried running batched jobs but no batch size was found.")
+
+        log.info("Assining each job to a different GPU for parallel job execution.")
+        log.info(f"Jobs batch size: {batch_size}.")
+        log.info(f"This is job_num: {hydra_conf.job.num}.")
+        gpu_id = hydra_conf.job.num % batch_size
+        log.info(f"This job gets GPU:{gpu_id}.")
+        config.trainer.gpus = [gpu_id]
+
     trainer: Trainer = hydra.utils.instantiate(config.trainer, callbacks=callbacks, logger=logger, _convert_="partial")
 
     # Send some parameters from config to all lightning loggers
@@ -79,23 +98,6 @@ def train(config: DictConfig) -> Optional[float]:
         callbacks=callbacks,
         logger=logger,
     )
-
-    # # Log model summary to file
-    # log.info("Writing model summary to model_summary.txt")
-    # with open(work_dir / "model_summary.txt", "w") as _file:
-    #     _file.write(
-    #         str(
-    #             torchinfo.summary(
-    #                 model.model,
-    #                 verbose=2,
-    #                 input_size=(32, 8),
-    #                 dtypes=[torch.int],
-    #                 depth=99,
-    #                 row_settings=["var_names"],
-    #                 col_names=["kernel_size", "output_size", "num_params"],
-    #             )
-    #         )
-    #     )
 
     # Train the model
     log.info("Starting training!")
@@ -121,8 +123,8 @@ def train(config: DictConfig) -> Optional[float]:
     )
 
     # Print path to best checkpoint
-    # if not config.trainer.get("fast_dev_run"):
-    #     log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
+    if not config.trainer.get("fast_dev_run"):
+        log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
 
     log.info("Done!")
 
