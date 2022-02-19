@@ -49,6 +49,17 @@ class WatchModel(Callback):
         logger.watch(model=trainer.model, log=self.log, log_freq=self.log_freq, log_graph=True)
 
 
+class UploadConfigFiles(Callback):
+    """Upload the hydra yaml config files for reference."""
+
+    @rank_zero_only
+    def on_train_start(self, trainer, pl_module):
+        # logger = get_wandb_logger(trainer=trainer)
+        # import ipdb; ipdb.set_trace()
+        wandb.save("config_tree.log")
+        wandb.save(".hydra/*.yaml")
+
+
 class UploadCodeAsArtifact(Callback):
     """Upload all code files to wandb as an artifact, at the beginning of the run."""
 
