@@ -1,0 +1,4 @@
+hans_evaluation:
+  _target_: src.callbacks.hans_evaluation.HansEvaluation
+  split_level: "global"
+  tokenizer_name: ${model.huggingface_model}

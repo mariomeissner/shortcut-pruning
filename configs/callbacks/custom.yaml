@@ -6,6 +6,11 @@ model_checkpoint:
   verbose: False
   dirpath: "./" # save "last.ckpt" into the experiment directory
 
+hans_evaluation:
+  _target_: src.callbacks.hans_evaluation.HansEvaluation
+  split_level: "global"
+  tokenizer_name: ${model.huggingface_model}
+
 model_summary:
   _target_: pytorch_lightning.callbacks.ModelSummary
   max_depth: 1
@@ -21,6 +26,9 @@ watch_model:
   _target_: src.callbacks.wandb_callbacks.WatchModel
   log: "all"
   log_freq: 100
+
+config_files:
+  _target_: src.callbacks.wandb_callbacks.UploadConfigFiles
 
 upload_code_as_artifact:
   _target_: src.callbacks.wandb_callbacks.UploadCodeAsArtifact
