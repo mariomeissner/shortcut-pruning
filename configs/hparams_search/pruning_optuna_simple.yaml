@@ -1,0 +1,60 @@
+# @package _global_
+
+defaults:
+  - override /hydra/sweeper: optuna
+  - override /hydra/launcher: joblib
+
+# choose metric which will be optimized by Optuna
+optimized_metric: "val/acc"
+
+hydra:
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+    storage: null
+    study_name: null
+    n_jobs: 2
+    direction: maximize
+
+    n_trials: 3
+
+    sampler:
+      _target_: optuna.samplers.TPESampler
+
+    # define range of hyperparameters
+    search_space:
+
+      # # training epochs
+      # trainer.max_epochs:
+      #   type: int
+      #   low: 1
+      #   high: 10
+
+      # model learning rate
+      model.learning_rate:
+        type: float
+        low: 5e-6
+        high: 1e-4
+
+      # # mask scores learning rate
+      # pruning.mask_scores_learning_rate:
+      #   type: float
+      #   low: 0.001
+      #   high: 0.1
+
+      # mask scores final threshold
+      # TODO: This will probably just end up being the highest one
+      # How about setting hans score as target?
+      # pruning.final_threshold:
+      #   type: float
+      #   low: 0.6
+      #   high: 0.95
+
+      # # final warmup
+      # pruning.final_warmup:
+      #   type: categorical
+      #   choices: [10, 15, 20]
+
+      # #regularization final lambda
+      # pruning.regularization_final_lambda:
+      #   type: categorical
+      #   choices: [10, 15, 20]
