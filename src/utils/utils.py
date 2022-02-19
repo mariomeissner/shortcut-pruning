@@ -144,12 +144,8 @@ def log_hyperparameters(
 
     # save number of model parameters
     hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params/trainable"] = sum(
-        p.numel() for p in model.parameters() if p.requires_grad
-    )
-    hparams["model/params/non_trainable"] = sum(
-        p.numel() for p in model.parameters() if not p.requires_grad
-    )
+    hparams["model/params/trainable"] = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    hparams["model/params/non_trainable"] = sum(p.numel() for p in model.parameters() if not p.requires_grad)
 
     # save model path
     hparams["path"] = os.getcwd()
