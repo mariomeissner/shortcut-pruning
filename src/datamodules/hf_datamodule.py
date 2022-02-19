@@ -13,6 +13,7 @@ from torchvision.transforms import transforms
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers import DataCollatorWithPadding
 from src.utils.utils import get_logger
+from joblib.externals.loky.backend.context import get_context
 
 log = get_logger(__name__)
 
@@ -42,14 +43,10 @@ class HFDataModule(LightningDataModule):
 
     def __init__(
         self,
-        dataset_name: str,
-        subdataset_name: str,
         num_labels: int,
         tokenizer_name: str,
         sentence_1_name: str,
         sentence_2_name: str,
-        val_subset_name: str = "validation",
-        test_subset_name: str = "test",
         batch_size: int = 64,
         max_length: int = 128,
         num_workers: int = 4,
@@ -80,15 +77,9 @@ class HFDataModule(LightningDataModule):
     def num_classes(self) -> int:
         return self.hparams.num_labels
 
-    def prepare_data(self):
-        """
-        We should not assign anything here, so this function simply caches the tokenizer and dataset.
-        """
-        AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
-        datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
-
     @staticmethod
     def process_data(dataset: DatasetDict, keep_columns, hparams, tokenizer):
+        """To be called in setup."""
         log.info("Processing dataset.")
         # Rename label to labels for consistency
         if "label" in dataset.column_names["train"]:
@@ -113,15 +104,27 @@ class HFDataModule(LightningDataModule):
 
     @staticmethod
     def map_func(example_batch, sentence_1_name, sentence_2_name, tokenizer, max_length):
+        """To be called by datasets.map"""
         # TODO: Allow support for single sentence
         sents = (example_batch[sentence_1_name], example_batch[sentence_2_name])
         result = tokenizer(*sents, max_length=max_length, truncation="longest_first")
         return result
 
+    def prepare_data(self):
+        """
+        Required datamodule function.
+        We should not assign anything here, so this function simply caches the tokenizer and dataset.
+        """
+        AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
+        self.download_dataset()
+
+    def download_dataset(self):
+        raise NotImplementedError
+
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
         This method is called by lightning twice for `trainer.fit()` and `trainer.test()`, so be careful if you do a random split!
-        The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
+        The `stage` can be used to differentiate whether it's called before `trainer.fit()` or `trainer.test()`."""
 
         if not self.tokenizer:
             self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
@@ -130,15 +133,7 @@ class HFDataModule(LightningDataModule):
             self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer)
 
         if not self.dataset:
-            self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
-            # Rename special subset names, while also getting rid of unwanted subsets
-            self.dataset = DatasetDict(
-                {
-                    "train": self.dataset["train"],
-                    "validation": self.dataset[self.hparams.val_subset_name],
-                    "test": self.dataset[self.hparams.test_subset_name],
-                }
-            )
+            self.dataset = self.download_dataset()
             self.dataset = self.process_data(
                 self.dataset,
                 self.keep_columns,
@@ -154,6 +149,7 @@ class HFDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=True,
+            multiprocessing_context=get_context("loky"),
         )
 
     def val_dataloader(self):
@@ -164,6 +160,7 @@ class HFDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=False,
+            multiprocessing_context=get_context("loky"),
         )
 
     def test_dataloader(self):
@@ -174,4 +171,5 @@ class HFDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=False,
+            multiprocessing_context=get_context("loky"),
         )
