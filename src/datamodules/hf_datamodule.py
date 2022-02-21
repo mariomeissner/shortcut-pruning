@@ -131,14 +131,13 @@ class HFDataModule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+            dataset_dict = {"train": self.dataset["train"]}
+            if self.hparams.val_subset_name in self.dataset:
+                dataset_dict["validation"] = self.dataset[self.hparams.val_subset_name]
+            if self.hparams.test_subset_name in self.dataset:
+                dataset_dict["test"] = self.dataset[self.hparams.test_subset_name]
             # Rename special subset names, while also getting rid of unwanted subsets
-            self.dataset = DatasetDict(
-                {
-                    "train": self.dataset["train"],
-                    "validation": self.dataset[self.hparams.val_subset_name],
-                    "test": self.dataset[self.hparams.test_subset_name],
-                }
-            )
+            self.dataset = DatasetDict(dataset_dict)
             self.dataset = self.process_data(
                 self.dataset,
                 self.keep_columns,

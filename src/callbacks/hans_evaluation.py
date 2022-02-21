@@ -42,5 +42,6 @@ class HansEvaluation(ModelCheckpoint):
             batch = {k: v.to(device) for k, v in batch.items()}
             labels = batch['labels']
             preds = pl_module(batch)[1] # Get preds
+            preds[preds==2] = 1 # neutral + contradiction = non-entail
             accuracy(preds, labels)
         pl_module.log("hans/val", accuracy.compute(), on_epoch=True)
