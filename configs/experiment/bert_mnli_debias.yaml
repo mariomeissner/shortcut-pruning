@@ -9,12 +9,11 @@ seed: 888
 test_after_training: False # MNLI cannot be tested, test set labels are hidden
 
 model:
-  loss_fn:
-    _target_: src.losses.ReweightByTeacher
+  loss_fn: "reweight-by-teacher"
   use_teacher_probs: True
 
 datamodule:
-  bias_path: /home/meissner/shortcut-pruning/data/mnli_shallow_2K_fixed.json
+  bias_path: /home/meissner/shortcut-pruning/data/weak_models/mnli_shallow_2K_fixed.json
 
 trainer:
   max_epochs: 3

@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: mnli.yaml
+
+name: weak/bert/mnli
+seed: 888
+test_after_training: False # MNLI cannot be tested, test set labels are hidden
+
+datamodule:
+  batch_size: 128
+  select_train_samples: 2000
+
+trainer:
+  max_epochs: 3
+  val_check_interval: 1
+  limit_val_batches: 0.0
+  gpus: 1

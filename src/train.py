@@ -69,22 +69,22 @@ def train(config: DictConfig) -> Optional[float]:
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
 
-    if config.get("batched_gpus"):
+    # if config.get("batched_gpus"):
 
-        hydra_conf = HydraConfig.get()
-        if hydra_conf.sweeper.get("max_batch_size"):
-            batch_size = hydra_conf.sweeper.max_batch_size
-        elif hydra_conf.sweeper.get("n_jobs"):
-            batch_size = hydra_conf.sweeper.n_jobs
-        else:
-            raise RuntimeError("Tried running batched jobs but no batch size was found.")
+    #     hydra_conf = HydraConfig.get()
+    #     if hydra_conf.sweeper.get("max_batch_size"):
+    #         batch_size = hydra_conf.sweeper.max_batch_size
+    #     elif hydra_conf.sweeper.get("n_jobs"):
+    #         batch_size = hydra_conf.sweeper.n_jobs
+    #     else:
+    #         raise RuntimeError("Tried running batched jobs but no batch size was found.")
 
-        log.info("Assining each job to a different GPU for parallel job execution.")
-        log.info(f"Jobs batch size: {batch_size}.")
-        log.info(f"This is job_num: {hydra_conf.job.num}.")
-        gpu_id = hydra_conf.job.num % batch_size
-        log.info(f"This job gets GPU:{gpu_id}.")
-        config.trainer.gpus = [gpu_id]
+    #     log.info("Assining each job to a different GPU for parallel job execution.")
+    #     log.info(f"Jobs batch size: {batch_size}.")
+    #     log.info(f"This is job_num: {hydra_conf.job.num}.")
+    #     gpu_id = hydra_conf.job.num % batch_size
+    #     log.info(f"This job gets GPU:{gpu_id}.")
+    #     config.trainer.gpus = [gpu_id]
 
     trainer: Trainer = hydra.utils.instantiate(config.trainer, callbacks=callbacks, logger=logger, _convert_="partial")
 

@@ -3,6 +3,7 @@ from typing import Sequence
 from datasets.dataset_dict import DatasetDict
 import fire
 import datasets
+import json
 
 import numpy as np
 from transformers import AutoTokenizer
@@ -10,15 +11,20 @@ from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding
 from tqdm import tqdm
-import torch 
+import torch
+from torch.nn.functional import softmax
 from src.models.hf_model import SequenceClassificationTransformer
 from src.models.hf_model_pruned import PruningTransformer
+
 
 def evaluate_on_mnli(
     checkpoint_path: str,
     pruned_model: bool = False,
+    do_matched: bool = True,
     do_mismatched: bool = False,
-    data_path: str = "data/mnli-tokenized",
+    extract_train_preds: bool = False,
+    save_path: str = None,
+    # data_path: str = "data/mnli-tokenized",
     max_length: int = 128,
     batch_size: int = 256,
 ):
@@ -28,7 +34,7 @@ def evaluate_on_mnli(
         model_class = PruningTransformer
     else:
         model_class = SequenceClassificationTransformer
-    
+
     model = model_class.load_from_checkpoint(checkpoint_path)
 
     # Load dataset
@@ -49,13 +55,23 @@ def evaluate_on_mnli(
             "attention_mask",
             "token_type_ids",
             "labels",
+            "idx",
         ],
     )
+    train_dataloader = DataLoader(
+        mnli["train"], batch_size=batch_size, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
+    )
     matched_dataloader = DataLoader(
-        mnli["validation_matched"], batch_size=batch_size, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
+        mnli["validation_matched"],
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=DataCollatorWithPadding(tokenizer=tokenizer),
     )
     mismatched_dataloader = DataLoader(
-        mnli["validation_mismatched"], batch_size=batch_size, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
+        mnli["validation_mismatched"],
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=DataCollatorWithPadding(tokenizer=tokenizer),
     )
 
     model.eval()
@@ -63,18 +79,19 @@ def evaluate_on_mnli(
     model.to(device)
 
     # Run matched evaluation
-    predictions = []
-    for idx, batch in enumerate(tqdm(matched_dataloader)):
-        batch = {k: v.to(device) for k, v in batch.items()}
-        with torch.no_grad():
-            logits, preds = model(batch)
-            preds = list(preds.detach().cpu())
-        predictions.extend(preds)
+    if do_matched:
+        predictions = []
+        for idx, batch in enumerate(tqdm(matched_dataloader)):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                logits, preds = model(batch)
+                preds = list(preds.detach().cpu())
+            predictions.extend(preds)
 
-    predictions = np.array(predictions)
-    targets = np.array(mnli["validation_matched"]["labels"])
-    accuracy = np.mean(predictions == targets)
-    print(f"MNLI Validation Matched score: {accuracy}")
+        predictions = np.array(predictions)
+        targets = np.array(mnli["validation_matched"]["labels"])
+        accuracy = np.mean(predictions == targets)
+        print(f"MNLI Validation Matched score: {accuracy}")
 
     # Run mismatched evaluation
     if do_mismatched:
@@ -90,6 +107,21 @@ def evaluate_on_mnli(
         targets = np.array(mnli["validation_mismatched"]["labels"])
         accuracy = np.mean(predictions == targets)
         print(f"MNLI Validation Mismatched score: {accuracy}")
+
+    if extract_train_preds:
+        predictions = {}
+        for idx, batch in enumerate(tqdm(train_dataloader)):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                logits, preds = model(batch)
+                soft_preds = softmax(logits, dim=1).detach().cpu().tolist()
+                idxs = batch['idx'].detach().cpu().tolist()
+                for idx, soft_pred in zip(idxs, soft_preds):
+                    predictions[idx] = soft_pred
+                # import ipdb; ipdb.set_trace()
+
+        with open(save_path, "w") as _file:
+            _file.write(json.dumps(predictions))
 
 
 if __name__ == "__main__":

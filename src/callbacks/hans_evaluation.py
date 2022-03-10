@@ -1,3 +1,4 @@
+import pytorch_lightning as pl
 from pathlib import Path
 from src.datamodules.hf_datamodule import HFDataModule
 from src.utils.utils import get_logger
@@ -15,7 +16,7 @@ class HansEvaluation(ModelCheckpoint):
         if not split_level in ["global", "label", "lexical_types"]:
             raise ValueError("split_level must be one of 'global', 'label', 'lexical_types'.")
 
-        if split_level == "lexical_types":
+        if split_level != "global":
             raise NotImplementedError
 
         self.split_level = split_level
@@ -40,8 +41,26 @@ class HansEvaluation(ModelCheckpoint):
         accuracy = Accuracy().to(device)
         for batch in hans_val_dataloader:
             batch = {k: v.to(device) for k, v in batch.items()}
-            labels = batch['labels']
-            preds = pl_module(batch)[1] # Get preds
-            preds[preds==2] = 1 # neutral + contradiction = non-entail
+            labels = batch["labels"]
+            preds = pl_module(batch)[1]  # Get preds
+            preds[preds == 2] = 1  # neutral + contradiction = non-entail
             accuracy(preds, labels)
         pl_module.log("hans/val", accuracy.compute(), on_epoch=True)
+        log.info("HANS validation done!")
+
+    # @rank_zero_only
+    # def on_test_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    #     # TODO: Split by label when requested
+    #     log.info("Validating on HANS...")
+    #     hans_val_dataloader = self.hans_datamodule.val_dataloader()
+    #     # labels = self.hans_datamodule.dataset["validation"]["labels"]
+    #     device = pl_module.device
+    #     accuracy = Accuracy().to(device)
+    #     for batch in tqdm(hans_val_dataloader):
+    #         batch = {k: v.to(device) for k, v in batch.items()}
+    #         labels = batch["labels"]
+    #         preds = pl_module(batch)[1]  # Get preds
+    #         preds[preds == 2] = 1  # neutral + contradiction = non-entail
+    #         accuracy(preds, labels)
+    #     pl_module.log("hans/val", accuracy.compute(), on_epoch=True)
+    #     log.info("HANS validation done!")

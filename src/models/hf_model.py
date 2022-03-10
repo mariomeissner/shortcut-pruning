@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 import torch
+
 from nn_pruning.patch_coordinator import ModelPatchingCoordinator, SparseTrainingArguments
 from pytorch_lightning import LightningModule
 from torch import nn
@@ -12,6 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
+from src.losses import ReweightByTeacher
 
 log = utils.get_logger(__name__)
 
@@ -35,8 +37,8 @@ class SequenceClassificationTransformer(LightningModule):
         self,
         huggingface_model: str,
         num_labels: int,
-        loss_fn: nn.Module,
         use_teacher_probs: bool,
+        loss_fn: str = "crossentropy",
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
@@ -47,6 +49,7 @@ class SequenceClassificationTransformer(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
+        # import ipdb; ipdb.set_trace()
         self.save_hyperparameters(logger=False)
 
         # Load model and add classification head
@@ -62,7 +65,10 @@ class SequenceClassificationTransformer(LightningModule):
         self.dropout = nn.Dropout(dropout_prob)
 
         # loss function (assuming single-label multi-class classification)
-        self.loss_fn = loss_fn
+        if loss_fn == "crossentropy":
+            self.loss_fn = torch.nn.CrossEntropyLoss()
+        elif loss_fn == "reweight-by-teacher":
+            self.loss_fn = ReweightByTeacher()
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
@@ -81,6 +87,9 @@ class SequenceClassificationTransformer(LightningModule):
         self.forward_signature = params
 
     def forward(self, batch: Dict[str, torch.tensor]):
+        # if "idx" in batch:
+        #     print("-------------- HERE COME THE IDX FOR THIS FORWARD PASS --------------")
+        #     print(batch['idx'])
         filtered_batch = {key: batch[key] for key in batch.keys() if key in self.forward_signature}
         outputs = self.model(**filtered_batch, return_dict=True)
         pooler = outputs.pooler_output

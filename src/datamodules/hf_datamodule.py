@@ -3,6 +3,7 @@ from typing import Optional, Tuple, Union
 
 import os
 import torch
+import random
 import datasets
 from datasets.dataset_dict import DatasetDict
 from pathlib import Path
@@ -44,9 +45,14 @@ class HFDataModule(LightningDataModule):
     def __init__(
         self,
         num_labels: int,
+        dataset_name: str,
+        subdataset_name: str,
         tokenizer_name: str,
         sentence_1_name: str,
         sentence_2_name: str,
+        select_train_samples: int = 0,
+        val_subset_name: str = "validation",
+        test_subset_name: str = "test",
         batch_size: int = 64,
         max_length: int = 128,
         num_workers: int = 4,
@@ -64,6 +70,8 @@ class HFDataModule(LightningDataModule):
         self.dataset = None
         self.tokenizer = None
         self.collator_fn = None
+
+        self.multiprocessing_context = get_context("loky") if num_workers > 1 else None
 
         self.keep_columns = [
             "idx",
@@ -119,7 +127,7 @@ class HFDataModule(LightningDataModule):
         self.download_dataset()
 
     def download_dataset(self):
-        raise NotImplementedError
+        datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -134,12 +142,21 @@ class HFDataModule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+
+            # Select training samples if specificed
+            if self.hparams.select_train_samples:
+                train_dict = self.dataset["train"].shuffle()[:self.hparams.select_train_samples]
+                self.dataset["train"] = datasets.Dataset.from_dict(train_dict)
+                # self.dataset["train"] = self.dataset["train"].select(
+                #     random.sample(range(len(self.dataset["train"])), self.hparams.select_train_samples)
+                # )
+
+            # Rename special subset names, while also getting rid of unwanted subsets
             dataset_dict = {"train": self.dataset["train"]}
             if self.hparams.val_subset_name in self.dataset:
                 dataset_dict["validation"] = self.dataset[self.hparams.val_subset_name]
             if self.hparams.test_subset_name in self.dataset:
                 dataset_dict["test"] = self.dataset[self.hparams.test_subset_name]
-            # Rename special subset names, while also getting rid of unwanted subsets
             self.dataset = DatasetDict(dataset_dict)
             self.dataset = self.process_data(
                 self.dataset,
@@ -150,33 +167,33 @@ class HFDataModule(LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
             dataset=self.dataset["train"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=True,
-            multiprocessing_context=get_context("loky"),
         )
 
     def val_dataloader(self):
         return DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
             dataset=self.dataset["validation"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=False,
-            multiprocessing_context=get_context("loky"),
         )
 
     def test_dataloader(self):
         return DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
             dataset=self.dataset["test"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=False,
-            multiprocessing_context=get_context("loky"),
         )
