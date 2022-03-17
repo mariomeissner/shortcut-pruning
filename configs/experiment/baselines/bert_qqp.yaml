@@ -1,0 +1,13 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: mnli.yaml
+
+name: baselines/bert/qqp
+seed: 888
+test_after_training: False # GLUE tasks can't be tested
+
+trainer:
+  max_epochs: 3
+  gpus: 1

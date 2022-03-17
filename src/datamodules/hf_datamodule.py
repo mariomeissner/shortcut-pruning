@@ -113,8 +113,10 @@ class HFDataModule(LightningDataModule):
     @staticmethod
     def map_func(example_batch, sentence_1_name, sentence_2_name, tokenizer, max_length):
         """To be called by datasets.map"""
-        # TODO: Allow support for single sentence
-        sents = (example_batch[sentence_1_name], example_batch[sentence_2_name])
+        if sentence_2_name is None:
+            sents = (example_batch[sentence_1_name],)
+        else:
+            sents = (example_batch[sentence_1_name], example_batch[sentence_2_name])
         result = tokenizer(*sents, max_length=max_length, truncation="longest_first")
         return result
 
@@ -138,18 +140,16 @@ class HFDataModule(LightningDataModule):
             self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
 
         if not self.collator_fn:
-            self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer)
+            self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer, pad_to_multiple_of=8)
 
         if not self.dataset:
             self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
 
             # Select training samples if specificed
             if self.hparams.select_train_samples:
-                train_dict = self.dataset["train"].shuffle()[:self.hparams.select_train_samples]
+                # datasets.Dataset slicing returns a dict
+                train_dict = self.dataset["train"].shuffle()[: self.hparams.select_train_samples]
                 self.dataset["train"] = datasets.Dataset.from_dict(train_dict)
-                # self.dataset["train"] = self.dataset["train"].select(
-                #     random.sample(range(len(self.dataset["train"])), self.hparams.select_train_samples)
-                # )
 
             # Rename special subset names, while also getting rid of unwanted subsets
             dataset_dict = {"train": self.dataset["train"]}

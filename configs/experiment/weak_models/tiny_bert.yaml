@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_tiny.yaml
+  - override /datamodule: mnli.yaml
+
+name: weak/tinybert/mnli
+seed: 888
+test_after_training: False # MNLI cannot be tested, test set labels are hidden
+
+datamodule:
+  batch_size: 32
+
+model:
+  learning_rate: 3e-5
+  weight_decay: 0.1
+
+trainer:
+  max_epochs: 3
+  gpus: 1

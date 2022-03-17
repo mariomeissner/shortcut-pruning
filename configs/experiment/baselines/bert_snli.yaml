@@ -1,0 +1,33 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=bert_mnli.yaml
+
+defaults:
+  - override /mode: exp.yaml
+  - override /trainer: default.yaml
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: hf_datamodule.yaml
+  - override /callbacks: default.yaml
+  - override /logger: tensorboard.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+# name of the run determines folder name in logs
+# it's also accessed by loggers
+name: "bert_snli"
+seed: 42
+test_after_training: True # Test set of SNLI is available
+
+model:
+  num_labels: 3
+
+datamodule:
+  dataset_name: "snli-tokenized"
+  batch_size: 256 # If you have a beefy GPU (loving those A100s!)
+
+trainer:
+  precision: 16
+  max_epochs: 3
+  gpus: 1
