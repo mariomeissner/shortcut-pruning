@@ -1,83 +1,52 @@
 import copy
 import inspect
 from dataclasses import dataclass
+from functools import partial
 from typing import Any, Dict, List, Tuple
 
 import torch
-
+from datasets import load_metric
 from nn_pruning.patch_coordinator import ModelPatchingCoordinator, SparseTrainingArguments
 from pytorch_lightning import LightningModule
 from torch import nn
-from torchmetrics import MaxMetric
+from torchmetrics import MaxMetric, Metric
 from torchmetrics.classification.accuracy import Accuracy
-from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
+from transformers import AdamW, AutoModel, AutoModelForQuestionAnswering, get_linear_schedule_with_warmup
 
-from src.utils import utils
 from src.losses import ReweightByTeacher
+from src.utils import utils
 
 log = utils.get_logger(__name__)
 
 
-class SequenceClassificationTransformer(LightningModule):
+class QuestionAnsweringTransformer(LightningModule):
     """
-    Transformer Model for Sequence Classification.
-
-    A LightningModule organizes your PyTorch code into 5 sections:
-        - Computations (init).
-        - Train loop (training_step)
-        - Validation loop (validation_step)
-        - Test loop (test_step)
-        - Optimizers (configure_optimizers)
-
-    Read the docs:
-        https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html
+    Transformer Model for Question Answering (SQuAD for now).
     """
 
     def __init__(
         self,
         huggingface_model: str,
-        num_labels: int,
         use_teacher_probs: bool,
         loss_fn: str = "crossentropy",
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
-        batch_size: int = 64,
+        batch_size: int = 16,
     ):
         super().__init__()
 
-        # this line allows to access init params with 'self.hparams' attribute
-        # it also ensures init params will be stored in ckpt
-        # import ipdb; ipdb.set_trace()
         self.save_hyperparameters(logger=False)
 
         # Load model and add classification head
-        self.model = AutoModel.from_pretrained(huggingface_model)
-        self.classifier = nn.Linear(self.model.config.hidden_size, num_labels)
-
-        # Init classifier weights according to initialization rules of model
-        self.model._init_weights(self.classifier)
-
-        # Apply dropout rate of model
-        dropout_prob = self.model.config.hidden_dropout_prob
-        log.info(f"Dropout probability of classifier set to {dropout_prob}.")
-        self.dropout = nn.Dropout(dropout_prob)
+        self.model = AutoModelForQuestionAnswering.from_pretrained(huggingface_model)
 
         # loss function (assuming single-label multi-class classification)
         if loss_fn == "crossentropy":
             self.loss_fn = torch.nn.CrossEntropyLoss()
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
-
-        # use separate metric instance for train, val and test step
-        # to ensure a proper reduction over the epoch
-        self.train_acc = Accuracy()
-        self.val_acc = Accuracy()
-        self.test_acc = Accuracy()
-
-        # for logging best so far validation accuracy
-        self.val_acc_best = MaxMetric()
 
         self._total_training_steps = None
 
@@ -89,72 +58,41 @@ class SequenceClassificationTransformer(LightningModule):
     def forward(self, batch: Dict[str, torch.tensor]):
         filtered_batch = {key: batch[key] for key in batch.keys() if key in self.forward_signature}
         outputs = self.model(**filtered_batch, return_dict=True)
-        pooler = outputs.pooler_output
-        pooler = self.dropout(pooler)
-        logits = self.classifier(pooler)
-        preds = torch.argmax(logits, dim=1)
-        return logits, preds
+        return outputs
 
     def step(self, batch: Dict[str, torch.tensor]):
-        logits, preds = self(batch)
-        logits = logits.view(-1, self.hparams.num_labels)
-        labels = batch["labels"].view(-1)
-        if self.hparams.use_teacher_probs:
-            teacher_probs = batch["teacher_probs"]
-            loss = self.loss_fn(logits, teacher_probs, labels)
-        else:
-            loss = self.loss_fn(logits, labels)
-        return loss, preds
+        """Implement debiasing here later."""
+        return self(batch)
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        loss, preds = self.step(batch)
-        # log train metrics
-        acc = self.train_acc(preds, batch["labels"])
-        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=False)
-        self.log("train/acc", acc, on_step=True, on_epoch=False, prog_bar=True)
-        # we can return here dict with any tensors
-        # and then read it in some callback or in `training_epoch_end()`` below
-        # remember to always return loss from `training_step()` or else backpropagation will fail!
-        return {"loss": loss, "preds": preds, "targets": batch["labels"]}
+        outputs = self.step(batch)
+        self.log("train/loss", outputs.loss, on_step=True, on_epoch=False, prog_bar=False)
+        return {"loss": outputs.loss}
 
     def training_epoch_end(self, outputs: List[Any]):
-        # `outputs` is a list of dicts returned from `training_step()`
         pass
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        logits, preds = self(batch)
-        # log val metrics
-        acc = self.val_acc(preds, batch["labels"])
-        # No loss for validation or test because of missing teacher_probs!!
-        # self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=False)
-
-        return {"preds": preds, "targets": batch["labels"]}
+        batch.pop("offset_mapping")
+        example_ids = batch.pop("example_id")
+        outputs = self(batch)
+        self.metric.update(example_ids, outputs.start_logits, outputs.end_logits)
 
     def validation_epoch_end(self, outputs: List[Any]):
-        acc = self.val_acc.compute()  # get val accuracy from current epoch
-        self.val_acc_best.update(acc)
-        self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
+        metric_dict = self.metric.compute()
+        self.log_dict(metric_dict, on_epoch=True,)
+
+    def on_validation_epoch_start(self) -> None:
+        self.metric.reset()
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        logits, preds = self(batch)
-
-        # log test metrics
-        acc = self.test_acc(preds, batch["labels"])
-        # No loss in test because of missing teacher_probs!!
-        # self.log("test/loss", loss, on_step=False, on_epoch=True)
-        self.log("test/acc", acc, on_step=False, on_epoch=True)
-
-        return {"preds": preds, "targets": batch["labels"]}
+        pass
 
     def test_epoch_end(self, outputs: List[Any]):
         pass
 
     def on_epoch_end(self):
-        # reset metrics at the end of every epoch!
-        self.train_acc.reset()
-        self.test_acc.reset()
-        self.val_acc.reset()
+        pass
 
     def total_training_steps(self) -> int:
         """Total training steps inferred from datamodule and devices."""
@@ -173,7 +111,7 @@ class SequenceClassificationTransformer(LightningModule):
         # Have already computed before
         if self._total_training_steps:
             return self._total_training_steps
-        
+
         # First call
         else:
             if isinstance(self.trainer.limit_train_batches, int) and self.trainer.limit_train_batches != 0:
@@ -196,6 +134,20 @@ class SequenceClassificationTransformer(LightningModule):
                 self._total_training_steps = self.trainer.max_steps
             self._total_training_steps = max_estimated_steps
             return self._total_training_steps
+
+    def setup(self, stage: str):
+        """Called at the beginning of train/val/test. Set up metrics here for access to dataset."""
+        dataset = self.trainer.datamodule
+        validation_dataset = dataset.dataset["validation"]
+        original_validation_dataset = dataset.dataset["validation_original"]
+        postprocess_func = partial(
+            dataset.postprocess_func,
+            dataset=dataset.dataset,
+            validation_dataset=validation_dataset,
+            original_validation_dataset=original_validation_dataset,
+        )
+        example_id_strings = dataset.example_id_strings
+        self.metric = SquadMetric(postprocess_func=postprocess_func, example_id_strings=example_id_strings)
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
@@ -221,3 +173,35 @@ class SequenceClassificationTransformer(LightningModule):
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         return [optimizer], [scheduler]
+
+
+class SquadMetric(Metric):
+    def __init__(self, postprocess_func, example_id_strings):
+        super().__init__(compute_on_step=False)
+        self.metric = load_metric("squad")
+        self.postprocess_func = postprocess_func
+        self.example_id_strings = example_id_strings
+        self.add_state("start_logits", [])
+        self.add_state("end_logits", [])
+        self.add_state("example_ids", [])
+
+    def update(self, example_ids: torch.Tensor, start_logits: torch.Tensor, end_logits: torch.Tensor):
+        self.example_ids += example_ids
+        self.start_logits += start_logits
+        self.end_logits += end_logits
+
+    def compute(self):
+        print("Start compute.")
+        reverse_lookup = {i: s for s, i in self.example_id_strings.items()}
+        example_ids = [reverse_lookup[i.item()] for i in self.example_ids]
+        predictions = (
+            torch.stack(self.start_logits).cpu().numpy(),
+            torch.stack(self.end_logits).cpu().numpy(),
+            example_ids,
+        )
+        print("Start Postprocess Func")
+        predictions, references = self.postprocess_func(predictions=predictions)
+        print("End Postprocess Func")
+        value = self.metric.compute(predictions=predictions, references=references)
+        print("End compute.")
+        return value

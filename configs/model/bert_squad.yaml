@@ -1,0 +1,7 @@
+_target_: src.models.squad_model.QuestionAnsweringTransformer
+
+huggingface_model: "bert-base-uncased"
+learning_rate: 3e-5
+batch_size: ${datamodule.batch_size}
+loss_fn: "crossentropy"
+use_teacher_probs: False

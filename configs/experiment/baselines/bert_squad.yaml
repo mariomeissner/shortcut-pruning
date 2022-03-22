@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_squad.yaml
+  - override /datamodule: squad.yaml
+
+name: baselines/bert/squad
+seed: 888
+test_after_training: False
+
+callbacks:
+  model_checkpoint:
+    monitor: null
+  hans_evaluation:
+    enabled: False
+    
+trainer:
+  max_epochs: 2
+  gpus: 1

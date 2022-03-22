@@ -10,9 +10,13 @@ log = get_logger(__name__)
 
 
 class HansEvaluation(ModelCheckpoint):
-    def __init__(self, split_level: str, tokenizer_name: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, split_level: str, tokenizer_name: str, enabled=True, *args, **kwargs):
 
+        super().__init__(*args, **kwargs)
+        self.enabled = enabled
+        if not enabled:
+            return
+            
         if not split_level in ["global", "label", "lexical_types"]:
             raise ValueError("split_level must be one of 'global', 'label', 'lexical_types'.")
 
@@ -33,6 +37,10 @@ class HansEvaluation(ModelCheckpoint):
 
     @rank_zero_only
     def on_validation_epoch_end(self, trainer, pl_module):
+
+        if not self.enabled:
+            return
+
         # TODO: Split by label when requested
         log.info("Validating on HANS...")
         hans_val_dataloader = self.hans_datamodule.val_dataloader()

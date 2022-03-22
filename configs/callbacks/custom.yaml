@@ -47,8 +47,8 @@ upload_code_as_artifact:
   code_dir: ${work_dir}/src
   use_git: False
 
-log_f1_precision_recall_heatmap:
-  _target_: src.callbacks.wandb_callbacks.LogF1PrecRecHeatmap
+# log_f1_precision_recall_heatmap:
+#   _target_: src.callbacks.wandb_callbacks.LogF1PrecRecHeatmap
 
-log_confusion_matrix:
-  _target_: src.callbacks.wandb_callbacks.LogConfusionMatrix
+# log_confusion_matrix:
+#   _target_: src.callbacks.wandb_callbacks.LogConfusionMatrix
