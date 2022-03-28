@@ -6,7 +6,7 @@ precision: 16
 min_epochs: 1
 max_epochs: 3
 
-val_check_interval: 1
+# val_check_interval: 0.5
 
 progress_bar_refresh_rate: 5
 resume_from_checkpoint: null

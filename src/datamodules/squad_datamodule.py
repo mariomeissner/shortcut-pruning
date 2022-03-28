@@ -104,8 +104,8 @@ class SquadDatamodule(LightningDataModule):
             remove_columns=dataset["validation"].column_names,
         )
         # Set torch format
-        dataset["train"].set_format("torch")
-        dataset["validation"].set_format("torch")
+        # dataset["train"].set_format("torch")
+        # dataset["validation"].set_format("torch")
         return dataset
 
     def prepare_data(self):
