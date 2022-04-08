@@ -2,9 +2,9 @@
 
 defaults:
   - override /model: bert_base_uncased.yaml
-  - override /datamodule: qqp.yaml
+  - override /datamodule: fever.yaml
 
-name: baselines/bert/qqp
+name: baselines/bert/fever
 seed: 888
 
 trainer:

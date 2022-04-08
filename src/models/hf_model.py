@@ -69,12 +69,14 @@ class SequenceClassificationTransformer(LightningModule):
             self.loss_fn = torch.nn.CrossEntropyLoss()
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
+        else:
+            raise ValueError("Unrecognized loss function name.")
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
         self.train_acc = Accuracy()
         self.val_acc = Accuracy()
-        self.test_acc = Accuracy()
+        self.test_accs = nn.ModuleList([Accuracy() for _ in range(5)])  # Arbitrarily assume that num_tests <= 5
 
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
@@ -92,7 +94,7 @@ class SequenceClassificationTransformer(LightningModule):
         pooler = outputs.pooler_output
         pooler = self.dropout(pooler)
         logits = self.classifier(pooler)
-        preds = torch.argmax(logits, dim=1)
+        preds = torch.argmax(logits, dim=1).int()
         return logits, preds
 
     def step(self, batch: Dict[str, torch.tensor]):
@@ -136,24 +138,27 @@ class SequenceClassificationTransformer(LightningModule):
         self.val_acc_best.update(acc)
         self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
 
-    def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
+    def on_test_start(self) -> None:
+        self.test_names = self.trainer.datamodule.get_test_names()
+
+    def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int, dataloader_idx: int = 0):
         logits, preds = self(batch)
 
-        # log test metrics
-        acc = self.test_acc(preds, batch["labels"])
-        # No loss in test because of missing teacher_probs!!
-        # self.log("test/loss", loss, on_step=False, on_epoch=True)
-        self.log("test/acc", acc, on_step=False, on_epoch=True)
+        # Nasty HANS hack here (I know I know, but I'm too lazy to find a better solution)
+        if self.test_names[dataloader_idx] == "hans":
+            preds[preds == 2] = 1  # Merge neutral and contradiction into 'non-entail'
+
+        self.test_accs[dataloader_idx].update(preds, batch["labels"])
 
         return {"preds": preds, "targets": batch["labels"]}
 
     def test_epoch_end(self, outputs: List[Any]):
-        pass
+        for test_name, metric in zip(self.test_names, self.test_accs):
+            self.log(f"test/{test_name}/acc", metric.compute(), on_step=False, on_epoch=True)
 
     def on_epoch_end(self):
         # reset metrics at the end of every epoch!
         self.train_acc.reset()
-        self.test_acc.reset()
         self.val_acc.reset()
 
     def total_training_steps(self) -> int:
@@ -173,7 +178,7 @@ class SequenceClassificationTransformer(LightningModule):
         # Have already computed before
         if self._total_training_steps:
             return self._total_training_steps
-        
+
         # First call
         else:
             if isinstance(self.trainer.limit_train_batches, int) and self.trainer.limit_train_batches != 0:

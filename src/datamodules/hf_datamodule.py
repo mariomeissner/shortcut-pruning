@@ -44,15 +44,8 @@ class HFDataModule(LightningDataModule):
 
     def __init__(
         self,
-        num_labels: int,
-        dataset_name: str,
-        subdataset_name: str,
         tokenizer_name: str,
-        sentence_1_name: str,
-        sentence_2_name: str,
         select_train_samples: int = 0,
-        val_subset_name: str = "validation",
-        test_subset_name: str = "test",
         batch_size: int = 64,
         max_length: int = 128,
         num_workers: int = 4,
@@ -89,25 +82,33 @@ class HFDataModule(LightningDataModule):
     def process_data(dataset: DatasetDict, keep_columns, hparams, tokenizer):
         """To be called in setup."""
         log.info("Processing dataset.")
+
         # Rename label to labels for consistency
-        if "label" in dataset.column_names["train"]:
-            dataset = dataset.rename_column("label", "labels")
+        for key in dataset.keys():
+            if "label" in dataset[key].column_names:
+                dataset[key] = dataset[key].rename_column("label", "labels")
 
         # Apply tokenization and filter out invalid labels
         fn_kwargs = {
             "sentence_1_name": hparams.sentence_1_name,
             "sentence_2_name": hparams.sentence_2_name,
-            "tokenizer": tokenizer,
             "max_length": hparams.max_length,
+            "tokenizer": tokenizer,
         }
-        dataset = dataset.map(HFDataModule.map_func, batched=True, num_proc=4, fn_kwargs=fn_kwargs)
+        dataset = dataset.map(HFDataModule.map_func, batched=True, num_proc=1, fn_kwargs=fn_kwargs)
         dataset = dataset.filter(lambda sample: sample["labels"] != -1)
 
         # Remove all unnecessary columns
         keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
 
         # Set torch format
-        dataset.set_format("torch", columns=keep_columns)
+        dataset["train"].set_format("torch", columns=keep_columns, output_all_columns=False)
+        keep_columns.remove("idx")
+        for key in dataset.keys():
+            if key != "train":
+                dataset[key].set_format("torch", columns=keep_columns, output_all_columns=False)
+            remove_cols = [column for column in dataset[key].column_names if not column in keep_columns]
+            dataset[key].remove_columns_(remove_cols)
         return dataset
 
     @staticmethod
@@ -128,8 +129,8 @@ class HFDataModule(LightningDataModule):
         AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
         self.download_dataset()
 
-    def download_dataset(self):
-        datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+    def load_dataset(self):
+        raise NotImplementedError()
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -143,7 +144,7 @@ class HFDataModule(LightningDataModule):
             self.collator_fn = DataCollatorWithPadding(tokenizer=self.tokenizer, pad_to_multiple_of=8)
 
         if not self.dataset:
-            self.dataset = datasets.load_dataset(self.hparams.dataset_name, self.hparams.subdataset_name)
+            self.dataset = self.load_dataset()
 
             # Select training samples if specificed
             if self.hparams.select_train_samples:
@@ -151,19 +152,15 @@ class HFDataModule(LightningDataModule):
                 train_dict = self.dataset["train"].shuffle()[: self.hparams.select_train_samples]
                 self.dataset["train"] = datasets.Dataset.from_dict(train_dict)
 
-            # Rename special subset names, while also getting rid of unwanted subsets
-            dataset_dict = {"train": self.dataset["train"]}
-            if self.hparams.val_subset_name in self.dataset:
-                dataset_dict["validation"] = self.dataset[self.hparams.val_subset_name]
-            if self.hparams.test_subset_name in self.dataset:
-                dataset_dict["test"] = self.dataset[self.hparams.test_subset_name]
-            self.dataset = DatasetDict(dataset_dict)
             self.dataset = self.process_data(
                 self.dataset,
                 self.keep_columns,
                 tokenizer=self.tokenizer,
                 hparams=self.hparams,
             )
+
+    def get_test_names(self) -> "list[str]":
+        raise NotImplementedError
 
     def train_dataloader(self):
         return DataLoader(
@@ -188,12 +185,4 @@ class HFDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            multiprocessing_context=self.multiprocessing_context,
-            dataset=self.dataset["test"],
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            collate_fn=self.collator_fn,
-            shuffle=False,
-        )
+        raise NotImplementedError()

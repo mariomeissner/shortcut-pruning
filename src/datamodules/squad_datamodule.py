@@ -52,7 +52,9 @@ class SquadDatamodule(LightningDataModule):
         self.dataset = None
         self.tokenizer = None
         self.collator_fn = None
-        self.example_id_strings = OrderedDict()
+        self.val_example_id_strings = OrderedDict()
+        self.test1_example_id_strings = OrderedDict()
+        self.test2_example_id_strings = OrderedDict()
 
         self.multiprocessing_context = get_context("loky") if num_workers > 1 else None
 
@@ -65,7 +67,15 @@ class SquadDatamodule(LightningDataModule):
         ]
 
     @staticmethod
-    def process_data(dataset: DatasetDict, keep_columns, hparams, tokenizer, example_id_strings):
+    def process_data(
+        dataset: DatasetDict,
+        keep_columns,
+        hparams,
+        tokenizer,
+        val_example_id_strings,
+        test1_example_id_strings,
+        test2_example_id_strings,
+    ):
         """To be called in setup."""
         log.info("Processing dataset.")
 
@@ -92,16 +102,32 @@ class SquadDatamodule(LightningDataModule):
             remove_columns=dataset["train"].column_names,
         )
         fn_kwargs.pop("answer_column_name")
-        prepare_validation_features = partial(
-            squad_processing.prepare_validation_features, example_id_strings=example_id_strings, **fn_kwargs
-        )
+        # prepare_validation_features = partial(
+        #     squad_processing.prepare_validation_features, example_id_strings=example_id_strings, **fn_kwargs
+        # )
         dataset["validation_original"] = dataset["validation"]  # keep an original copy for computing metrics
         dataset["validation"] = dataset["validation"].map(
-            prepare_validation_features,
+            partial(squad_processing.prepare_validation_features, example_id_strings=val_example_id_strings, **fn_kwargs),
             load_from_cache_file=False,
             batched=True,
             num_proc=1,
             remove_columns=dataset["validation"].column_names,
+        )
+        dataset["test_addsent_original"] = dataset["test_addsent"]  # keep an original copy for computing metrics
+        dataset["test_addsent"] = dataset["test_addsent"].map(
+            partial(squad_processing.prepare_validation_features, example_id_strings=test1_example_id_strings, **fn_kwargs),
+            load_from_cache_file=False,
+            batched=True,
+            num_proc=1,
+            remove_columns=dataset["test_addsent"].column_names,
+        )
+        dataset["test_addonesent_original"] = dataset["test_addonesent"]  # keep an original copy for computing metrics
+        dataset["test_addonesent"] = dataset["test_addonesent"].map(
+            partial(squad_processing.prepare_validation_features, example_id_strings=test2_example_id_strings, **fn_kwargs),
+            load_from_cache_file=False,
+            batched=True,
+            num_proc=1,
+            remove_columns=dataset["test_addonesent"].column_names,
         )
         # Set torch format
         # dataset["train"].set_format("torch")
@@ -115,6 +141,8 @@ class SquadDatamodule(LightningDataModule):
         """
         AutoTokenizer.from_pretrained(self.hparams.tokenizer_name, use_fast=True)
         datasets.load_dataset("squad")
+        datasets.load_dataset("squad_adversarial", "AddSent")
+        datasets.load_dataset("squad_adversarial", "AddOneSent")
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -129,6 +157,8 @@ class SquadDatamodule(LightningDataModule):
 
         if not self.dataset:
             self.dataset = datasets.load_dataset("squad")
+            self.dataset["test_addsent"] = datasets.load_dataset("squad_adversarial", "AddSent")["validation"]
+            self.dataset["test_addonesent"] = datasets.load_dataset("squad_adversarial", "AddOneSent")["validation"]
 
             # Select training samples if specificed
             if self.hparams.select_train_samples:
@@ -142,7 +172,9 @@ class SquadDatamodule(LightningDataModule):
                 self.keep_columns,
                 tokenizer=self.tokenizer,
                 hparams=self.hparams,
-                example_id_strings=self.example_id_strings,
+                val_example_id_strings=self.val_example_id_strings,
+                test1_example_id_strings=self.test1_example_id_strings,
+                test2_example_id_strings=self.test2_example_id_strings,
             )
 
     def postprocess_func(
@@ -153,7 +185,7 @@ class SquadDatamodule(LightningDataModule):
         predictions: Dict[int, torch.Tensor],
     ) -> Any:
         return squad_processing.post_processing_function(
-            datasets=dataset,
+            dataset_original=original_validation_dataset,
             examples=original_validation_dataset,
             features=validation_dataset,
             output_dir=self.hparams.output_dir,
@@ -188,12 +220,22 @@ class SquadDatamodule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        return DataLoader(
+        addsent_dataloader = DataLoader(
             multiprocessing_context=self.multiprocessing_context,
-            dataset=self.dataset["test"],
+            dataset=self.dataset["test_addsent"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=False,
         )
+        addonesent_dataloader = DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
+            dataset=self.dataset["test_addonesent"],
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            collate_fn=self.collator_fn,
+            shuffle=False,
+        )
+        return [addsent_dataloader, addonesent_dataloader]

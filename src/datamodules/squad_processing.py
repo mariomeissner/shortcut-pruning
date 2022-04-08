@@ -163,7 +163,7 @@ def prepare_validation_features(
 
 
 def post_processing_function(
-    datasets,
+    dataset_original,
     predictions,
     answer_column_name,
     features=None,
@@ -194,7 +194,7 @@ def post_processing_function(
         } for k, v in predictions.items()]
     else:
         formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]
-    references = [{"id": ex["id"], "answers": ex[answer_column_name]} for ex in datasets["validation_original"]]
+    references = [{"id": ex["id"], "answers": ex[answer_column_name]} for ex in dataset_original]
     return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
 

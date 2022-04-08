@@ -1,0 +1,10 @@
+_target_: src.datamodules.fever_datamodule.FeverDataModule
+
+num_labels: 3
+data_path: "/home/meissner/shortcut-pruning/data/fever/"
+tokenizer_name: ${model.huggingface_model}
+sentence_1_name: evidence
+sentence_2_name: claim
+batch_size: 32
+num_workers: 8
+pin_memory: True

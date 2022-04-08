@@ -1,13 +1,10 @@
-_target_: src.datamodules.hf_datamodule.HFDataModule
+_target_: src.datamodules.fever_datamodule.QQPDataModule
 
-dataset_name: glue
-subdataset_name: qqp
 num_labels: 2
+data_path: "/home/meissner/shortcut-pruning/data/paws/paws_qqp/"
 tokenizer_name: ${model.huggingface_model}
 sentence_1_name: question1
 sentence_2_name: question2
-val_subset_name: "validation"
-test_subset_name: "test"
 batch_size: 32
 num_workers: 8
 pin_memory: True

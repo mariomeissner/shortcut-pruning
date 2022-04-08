@@ -76,20 +76,37 @@ class QuestionAnsweringTransformer(LightningModule):
         batch.pop("offset_mapping")
         example_ids = batch.pop("example_id")
         outputs = self(batch)
-        self.metric.update(example_ids, outputs.start_logits, outputs.end_logits)
+        self.val_metric.update(example_ids, outputs.start_logits, outputs.end_logits)
 
     def validation_epoch_end(self, outputs: List[Any]):
-        metric_dict = self.metric.compute()
-        self.log_dict(metric_dict, on_epoch=True,)
+        metric_dict = self.val_metric.compute()
+        self.log("val/exact_match", metric_dict["exact_match"], on_epoch=True)
+        self.log("val/f1", metric_dict["f1"], on_epoch=True)
 
     def on_validation_epoch_start(self) -> None:
-        self.metric.reset()
+        self.val_metric.reset()
 
-    def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
-        pass
+    def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int, dataloader_idx: int):
+        assert dataloader_idx in (0, 1)
+        batch.pop("offset_mapping")
+        example_ids = batch.pop("example_id")
+        outputs = self(batch)
+        if dataloader_idx == 0:
+            self.test1_metric.update(example_ids, outputs.start_logits, outputs.end_logits)
+        else:
+            self.test2_metric.update(example_ids, outputs.start_logits, outputs.end_logits)
 
     def test_epoch_end(self, outputs: List[Any]):
-        pass
+        test1_metric_dict = self.test1_metric.compute()
+        test2_metric_dict = self.test2_metric.compute()
+        self.log("test/addsent/exact_match", test1_metric_dict["exact_match"], on_epoch=True)
+        self.log("test/addsent/f1", test1_metric_dict["f1"], on_epoch=True)
+        self.log("test/addonesent/exact_match", test2_metric_dict["exact_match"], on_epoch=True)
+        self.log("test/addonesent/f1", test2_metric_dict["f1"], on_epoch=True)
+
+    def on_test_epoch_start(self) -> None:
+        self.test1_metric.reset()
+        self.test2_metric.reset()
 
     def on_epoch_end(self):
         pass
@@ -137,17 +154,34 @@ class QuestionAnsweringTransformer(LightningModule):
 
     def setup(self, stage: str):
         """Called at the beginning of train/val/test. Set up metrics here for access to dataset."""
-        dataset = self.trainer.datamodule
-        validation_dataset = dataset.dataset["validation"]
-        original_validation_dataset = dataset.dataset["validation_original"]
-        postprocess_func = partial(
-            dataset.postprocess_func,
-            dataset=dataset.dataset,
-            validation_dataset=validation_dataset,
-            original_validation_dataset=original_validation_dataset,
+        datamodule = self.trainer.datamodule
+        self.val_metric = SquadMetric(
+            postprocess_func=partial(
+                datamodule.postprocess_func,
+                dataset=datamodule.dataset,
+                validation_dataset=datamodule.dataset["validation"],
+                original_validation_dataset=datamodule.dataset["validation_original"],
+            ),
+            example_id_strings=datamodule.val_example_id_strings,
         )
-        example_id_strings = dataset.example_id_strings
-        self.metric = SquadMetric(postprocess_func=postprocess_func, example_id_strings=example_id_strings)
+        self.test1_metric = SquadMetric(
+            postprocess_func=partial(
+                datamodule.postprocess_func,
+                dataset=datamodule.dataset,
+                validation_dataset=datamodule.dataset["test_addsent"],
+                original_validation_dataset=datamodule.dataset["test_addsent_original"],
+            ),
+            example_id_strings=datamodule.test1_example_id_strings,
+        )
+        self.test2_metric = SquadMetric(
+            postprocess_func=partial(
+                datamodule.postprocess_func,
+                dataset=datamodule.dataset,
+                validation_dataset=datamodule.dataset["test_addonesent"],
+                original_validation_dataset=datamodule.dataset["test_addonesent_original"],
+            ),
+            example_id_strings=datamodule.test2_example_id_strings,
+        )
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
@@ -191,7 +225,6 @@ class SquadMetric(Metric):
         self.end_logits += end_logits
 
     def compute(self):
-        print("Start compute.")
         reverse_lookup = {i: s for s, i in self.example_id_strings.items()}
         example_ids = [reverse_lookup[i.item()] for i in self.example_ids]
         predictions = (
@@ -199,9 +232,6 @@ class SquadMetric(Metric):
             torch.stack(self.end_logits).cpu().numpy(),
             example_ids,
         )
-        print("Start Postprocess Func")
         predictions, references = self.postprocess_func(predictions=predictions)
-        print("End Postprocess Func")
         value = self.metric.compute(predictions=predictions, references=references)
-        print("End compute.")
         return value

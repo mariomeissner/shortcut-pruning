@@ -4,16 +4,23 @@ defaults:
   - override /model: bert_squad.yaml
   - override /datamodule: squad.yaml
 
-name: baselines/bert/squad
+name: weak/tinybert/squad
 seed: 888
+test_after_training: True
+
+model:
+  huggingface_model: "prajjwal1/bert-tiny"
+
+trainer:
+  num_sanity_val_steps: 0
+  max_epochs: 3
+  gpus: 1
+
+datamodule:
+  batch_size: 16
 
 callbacks:
   model_checkpoint:
     monitor: null
   hans_evaluation:
     enabled: False
-    
-trainer:
-  num_sanity_val_steps: 0
-  max_epochs: 2
-  gpus: 1
