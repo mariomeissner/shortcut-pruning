@@ -24,7 +24,8 @@ log = get_logger(__name__)
 class HFDataModule(LightningDataModule):
     """
     Base LightningDataModule for Huggingface Datasets.
-    Subclass it with dataset-specific logic to run your tasks.
+    Requires a pre-processed (tokenized, cleaned...) dataset provided within the `data` folder.
+    Might require adjustments if your dataset doesn't follow the structure of SNLI or MNLI.
     """
 
     def __init__(
@@ -104,7 +105,11 @@ class HFDataModule(LightningDataModule):
         # Set torch format
         keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
         dataset["train"].set_format("torch", columns=keep_columns, output_all_columns=False)
+
         keep_columns.remove("idx")
+        if "teacher_probs" in keep_columns:
+            keep_columns.remove("teacher_probs")
+
         for key in dataset.keys():
             if key != "train":
                 dataset[key].set_format("torch", columns=keep_columns, output_all_columns=False)
