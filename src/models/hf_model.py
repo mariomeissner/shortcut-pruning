@@ -21,16 +21,7 @@ log = utils.get_logger(__name__)
 class SequenceClassificationTransformer(LightningModule):
     """
     Transformer Model for Sequence Classification.
-
-    A LightningModule organizes your PyTorch code into 5 sections:
-        - Computations (init).
-        - Train loop (training_step)
-        - Validation loop (validation_step)
-        - Test loop (test_step)
-        - Optimizers (configure_optimizers)
-
-    Read the docs:
-        https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html
+    Adapted to work with debiasing setups.
     """
 
     def __init__(

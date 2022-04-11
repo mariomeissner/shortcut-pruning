@@ -1,51 +1,37 @@
+import os
+import random
 from argparse import ArgumentError
+from pathlib import Path
 from typing import Optional, Tuple, Union
 
-import os
-import torch
-import random
 import datasets
+import torch
 from datasets.dataset_dict import DatasetDict
-from pathlib import Path
+from joblib.externals.loky.backend.context import get_context
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
-from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers import DataCollatorWithPadding
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+
+from bias_utils import load_bias, load_teacher_probs
 from src.utils.utils import get_logger
-from joblib.externals.loky.backend.context import get_context
 
 log = get_logger(__name__)
 
 
 class HFDataModule(LightningDataModule):
     """
-    LightningDataModule for HF Datasets.
-    Requires a pre-processed (tokenized, cleaned...) dataset provided within the `data` folder.
-    Might require adjustments if your dataset doesn't follow the structure of SNLI or MNLI.
-
-    Pass a (group, set_name) tuple to `dataset_name` if your dataset is part of a group such as glue.
-    For example, for MNLI, use ('glue', 'mnli').
-
-    A DataModule implements 5 key methods:
-        - prepare_data (things to do on 1 GPU/TPU, not on every GPU/TPU in distributed mode)
-        - setup (things to do on every accelerator in distributed mode)
-        - train_dataloader (the training dataloader)
-        - val_dataloader (the validation dataloader(s))
-        - test_dataloader (the test dataloader(s))
-
-    This allows you to share a full dataset without explaining how to download,
-    split, transform and process the data.
-
-    Read the docs:
-        https://pytorch-lightning.readthedocs.io/en/latest/extensions/datamodules.html
+    Base LightningDataModule for Huggingface Datasets.
+    Subclass it with dataset-specific logic to run your tasks.
     """
 
     def __init__(
         self,
         tokenizer_name: str,
         select_train_samples: int = 0,
+        bias_path: str = None,
         batch_size: int = 64,
         max_length: int = 128,
         num_workers: int = 4,
@@ -72,6 +58,8 @@ class HFDataModule(LightningDataModule):
             "attention_mask",
             "token_type_ids",
             "labels",
+            "bias",
+            "teacher_probs",
         ]
 
     @property
@@ -96,12 +84,25 @@ class HFDataModule(LightningDataModule):
             "tokenizer": tokenizer,
         }
         dataset = dataset.map(HFDataModule.map_func, batched=True, num_proc=1, fn_kwargs=fn_kwargs)
-        dataset = dataset.filter(lambda sample: sample["labels"] != -1)
+        # dataset = dataset.filter(lambda sample: sample["labels"] != -1)
 
-        # Remove all unnecessary columns
-        keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
+        # Append bias if provided
+        if hparams.bias_path:
+            log.info(f"Appending bias from file {hparams.bias_path}.")
+            bias_dict = load_teacher_probs(hparams.bias_path)
+
+            dataset["train"] = dataset["train"].map(
+                HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": False}
+            )
+            # dataset["validation"] = dataset["validation"].map(
+            #     HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": True}
+            # )
+            # dataset["test"] = dataset["test"].map(
+            #     HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": True}
+            # )
 
         # Set torch format
+        keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
         dataset["train"].set_format("torch", columns=keep_columns, output_all_columns=False)
         keep_columns.remove("idx")
         for key in dataset.keys():
@@ -121,6 +122,15 @@ class HFDataModule(LightningDataModule):
         result = tokenizer(*sents, max_length=max_length, truncation="longest_first")
         return result
 
+    @staticmethod
+    def append_bias(example, bias_dict, empty=False):
+        if empty:
+            bias = [0, 0, 0]
+        else:
+            bias = bias_dict[str(example["idx"])]
+        example["teacher_probs"] = bias
+        return example
+
     def prepare_data(self):
         """
         Required datamodule function.
@@ -130,6 +140,9 @@ class HFDataModule(LightningDataModule):
         self.download_dataset()
 
     def load_dataset(self):
+        raise NotImplementedError()
+
+    def download_dataset(self):
         raise NotImplementedError()
 
     def setup(self, stage: Optional[str] = None):
