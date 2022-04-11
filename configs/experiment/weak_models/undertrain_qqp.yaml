@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: qqp.yaml
+
+name: weak/undertrain/bert/qqp
+seed: 888
+
+datamodule:
+  batch_size: 32
+  select_train_samples: 500
+
+trainer:
+  max_epochs: 5
+  val_check_interval: ${trainer.max_epochs}
+  limit_val_batches: 0.0
+  gpus: 1
