@@ -1,4 +1,4 @@
-_target_: src.datamodules.fever_datamodule.QQPDataModule
+_target_: src.datamodules.qqp_datamodule.QQPDataModule
 
 num_labels: 2
 data_path: "/home/meissner/shortcut-pruning/data/paws/paws_qqp/"

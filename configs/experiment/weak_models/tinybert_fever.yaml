@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_tiny.yaml
+  - override /datamodule: fever.yaml
+
+name: weak/tinybert/fever
+seed: 888
+test_after_training: False
+
+datamodule:
+  batch_size: 32
+
+model:
+  learning_rate: 2e-5
+  weight_decay: 0.1
+
+trainer:
+  max_epochs: 3
+  gpus: 1
