@@ -2,6 +2,7 @@ _target_: src.datamodules.squad_datamodule.SquadDatamodule
 
 tokenizer_name: ${model.huggingface_model}
 output_dir: "."
+data_path: /home/meissner/shortcut-pruning/data/squad/
 n_best_size: 20
 max_length: 384
 doc_stride: 128

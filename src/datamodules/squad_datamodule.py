@@ -1,6 +1,7 @@
 from argparse import ArgumentError
 from collections import OrderedDict
 from functools import partial
+import json
 from typing import Any, Dict, Optional, Tuple, Union
 
 import os
@@ -21,11 +22,17 @@ from joblib.externals.loky.backend.context import get_context
 
 log = get_logger(__name__)
 
+# Useful repos:
+# https://github.com/NicholasYuan/bert_delta
+# https://github.com/chrisc36/debias/
+# https://github.com/robinjia/adversarial-squad
+
 
 class SquadDatamodule(LightningDataModule):
     def __init__(
         self,
         output_dir: str,
+        data_path: str,
         tokenizer_name: str,
         n_best_size: int,
         doc_stride: int,
@@ -107,7 +114,9 @@ class SquadDatamodule(LightningDataModule):
         # )
         dataset["validation_original"] = dataset["validation"]  # keep an original copy for computing metrics
         dataset["validation"] = dataset["validation"].map(
-            partial(squad_processing.prepare_validation_features, example_id_strings=val_example_id_strings, **fn_kwargs),
+            partial(
+                squad_processing.prepare_validation_features, example_id_strings=val_example_id_strings, **fn_kwargs
+            ),
             load_from_cache_file=False,
             batched=True,
             num_proc=1,
@@ -115,7 +124,9 @@ class SquadDatamodule(LightningDataModule):
         )
         dataset["test_addsent_original"] = dataset["test_addsent"]  # keep an original copy for computing metrics
         dataset["test_addsent"] = dataset["test_addsent"].map(
-            partial(squad_processing.prepare_validation_features, example_id_strings=test1_example_id_strings, **fn_kwargs),
+            partial(
+                squad_processing.prepare_validation_features, example_id_strings=test1_example_id_strings, **fn_kwargs
+            ),
             load_from_cache_file=False,
             batched=True,
             num_proc=1,
@@ -123,7 +134,9 @@ class SquadDatamodule(LightningDataModule):
         )
         dataset["test_addonesent_original"] = dataset["test_addonesent"]  # keep an original copy for computing metrics
         dataset["test_addonesent"] = dataset["test_addonesent"].map(
-            partial(squad_processing.prepare_validation_features, example_id_strings=test2_example_id_strings, **fn_kwargs),
+            partial(
+                squad_processing.prepare_validation_features, example_id_strings=test2_example_id_strings, **fn_kwargs
+            ),
             load_from_cache_file=False,
             batched=True,
             num_proc=1,
@@ -160,6 +173,11 @@ class SquadDatamodule(LightningDataModule):
             self.dataset["test_addsent"] = datasets.load_dataset("squad_adversarial", "AddSent")["validation"]
             self.dataset["test_addonesent"] = datasets.load_dataset("squad_adversarial", "AddOneSent")["validation"]
 
+            # Additionally load datasets from the json file for calling the adversarial evaluation function
+            json_add_sent_path = self.hparams.data_path + "add_sent.json"
+            with open(json_add_sent_path) as _file:
+                self.json_add_sent = json.load(_file)["data"]
+
             # Select training samples if specificed
             if self.hparams.select_train_samples:
                 # datasets.Dataset slicing returns a dict
@@ -188,13 +206,13 @@ class SquadDatamodule(LightningDataModule):
             dataset_original=original_validation_dataset,
             examples=original_validation_dataset,
             features=validation_dataset,
-            output_dir=self.hparams.output_dir,
             n_best_size=self.hparams.n_best_size,
             predictions=predictions,
             max_answer_length=self.hparams.max_answer_length,
             answer_column_name="answers",
             version_2_with_negative=self.hparams.version_2_with_negative,
             null_score_diff_threshold=self.hparams.null_score_diff_threshold,
+            # output_dir=self.hparams.output_dir,
         )
 
     def train_dataloader(self):

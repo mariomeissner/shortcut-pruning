@@ -2,6 +2,7 @@ import copy
 import inspect
 from dataclasses import dataclass
 from functools import partial
+import json
 from typing import Any, Dict, List, Tuple
 
 import torch
@@ -15,13 +16,14 @@ from transformers import AdamW, AutoModel, AutoModelForQuestionAnswering, get_li
 
 from src.losses import ReweightByTeacher
 from src.utils import utils
+from src.utils.eval_squad import evaluate_adversarial
 
 log = utils.get_logger(__name__)
 
 
 class QuestionAnsweringTransformer(LightningModule):
     """
-    Transformer Model for Question Answering (SQuAD for now).
+    Transformer Model for SQuAD.
     """
 
     def __init__(
@@ -164,7 +166,7 @@ class QuestionAnsweringTransformer(LightningModule):
             ),
             example_id_strings=datamodule.val_example_id_strings,
         )
-        self.test1_metric = SquadMetric(
+        self.test1_metric = AdversarialSquadMetric(
             postprocess_func=partial(
                 datamodule.postprocess_func,
                 dataset=datamodule.dataset,
@@ -172,6 +174,7 @@ class QuestionAnsweringTransformer(LightningModule):
                 original_validation_dataset=datamodule.dataset["test_addsent_original"],
             ),
             example_id_strings=datamodule.test1_example_id_strings,
+            json_dataset=datamodule.json_add_sent,
         )
         self.test2_metric = SquadMetric(
             postprocess_func=partial(
@@ -234,4 +237,37 @@ class SquadMetric(Metric):
         )
         predictions, references = self.postprocess_func(predictions=predictions)
         value = self.metric.compute(predictions=predictions, references=references)
+        return value
+
+
+class AdversarialSquadMetric(Metric):
+    def __init__(self, postprocess_func, example_id_strings, json_dataset):
+        super().__init__(compute_on_step=False)
+        self.postprocess_func = postprocess_func
+        self.example_id_strings = example_id_strings
+        self.json_dataset = json_dataset
+        self.add_state("start_logits", [])
+        self.add_state("end_logits", [])
+        self.add_state("example_ids", [])
+
+    def update(self, example_ids: torch.Tensor, start_logits: torch.Tensor, end_logits: torch.Tensor):
+        self.example_ids += example_ids
+        self.start_logits += start_logits
+        self.end_logits += end_logits
+
+    def compute(self):
+        reverse_lookup = {i: s for s, i in self.example_id_strings.items()}
+        example_ids = [reverse_lookup[i.item()] for i in self.example_ids]
+        predictions = (
+            torch.stack(self.start_logits).cpu().numpy(),
+            torch.stack(self.end_logits).cpu().numpy(),
+            example_ids,
+        )
+        predictions, references = self.postprocess_func(predictions=predictions)
+        print(predictions[:5])
+        with open("predictions.txt", "w+") as _file:
+            _file.write(json.dumps(predictions))
+        # exit()
+        value = evaluate_adversarial(self.json_dataset, predictions)
+        value = {"f1" : value['af'], "exact_match": value['ae']}
         return value
