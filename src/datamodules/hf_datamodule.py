@@ -113,8 +113,8 @@ class HFDataModule(LightningDataModule):
         for key in dataset.keys():
             if key != "train":
                 dataset[key].set_format("torch", columns=keep_columns, output_all_columns=False)
-            remove_cols = [column for column in dataset[key].column_names if not column in keep_columns]
-            dataset[key].remove_columns_(remove_cols)
+            # remove_cols = [column for column in dataset[key].column_names if not column in keep_columns]
+            # dataset[key].remove_columns_(remove_cols)
         return dataset
 
     @staticmethod
