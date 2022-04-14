@@ -4,7 +4,7 @@ defaults:
   - override /model: bert_base_uncased.yaml
   - override /datamodule: mnli.yaml
 
-name: debiasing/bert/mnli
+name: debiasing/{type}/bert/mnli
 seed: null
 
 model:

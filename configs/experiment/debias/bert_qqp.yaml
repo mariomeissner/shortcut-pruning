@@ -4,7 +4,7 @@ defaults:
   - override /model: bert_base_uncased.yaml
   - override /datamodule: qqp.yaml
 
-name: debiasing/bert/qqp
+name: debiasing/{type}/bert/qqp
 seed: null
 
 model:

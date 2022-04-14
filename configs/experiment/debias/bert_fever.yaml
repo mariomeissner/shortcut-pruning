@@ -4,7 +4,7 @@ defaults:
   - override /model: bert_base_uncased.yaml
   - override /datamodule: fever.yaml
 
-name: null # Override me!! debias/{type}/bert_fever
+name: null # Override me!! debiasing/{type}/bert/fever
 seed: null
 
 model:

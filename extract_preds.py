@@ -31,12 +31,11 @@ def extract_preds(
 ):
 
     if dataset_name == "mnli":
-        dataset = datasets.load_dataset("glue", "mnli")["train"]
+        dataset = datasets.load_dataset("glue", "mnli")["train"].rename_column("label", "labels")
         sent1 = "premise"
         sent2 = "hypothesis"
     elif dataset_name == "qqp":
-        dataset = datasets.load_dataset("glue", "qqp")["train"]
-        dataset =dataset.rename_column("label", "labels")
+        dataset = datasets.load_dataset("glue", "qqp")["train"].rename_column("label", "labels")
         sent1 = "question1"
         sent2 = "question2"
     elif dataset_name == "fever":

@@ -6,7 +6,6 @@ defaults:
 
 name: weak/tinybert/mnli
 seed: 888
-test_after_training: False # MNLI cannot be tested, test set labels are hidden
 
 datamodule:
   batch_size: 32
