@@ -176,7 +176,7 @@ class QuestionAnsweringTransformer(LightningModule):
             example_id_strings=datamodule.test1_example_id_strings,
             json_dataset=datamodule.json_add_sent,
         )
-        self.test2_metric = SquadMetric(
+        self.test2_metric = AdversarialSquadMetric(
             postprocess_func=partial(
                 datamodule.postprocess_func,
                 dataset=datamodule.dataset,
@@ -184,6 +184,7 @@ class QuestionAnsweringTransformer(LightningModule):
                 original_validation_dataset=datamodule.dataset["test_addonesent_original"],
             ),
             example_id_strings=datamodule.test2_example_id_strings,
+            json_dataset=datamodule.json_add_one_sent,
         )
 
     def configure_optimizers(self):
@@ -264,10 +265,11 @@ class AdversarialSquadMetric(Metric):
             example_ids,
         )
         predictions, references = self.postprocess_func(predictions=predictions)
-        print(predictions[:5])
+        predictions = {prediction["id"]: prediction["prediction_text"] for prediction in predictions}
         with open("predictions.txt", "w+") as _file:
             _file.write(json.dumps(predictions))
         # exit()
         value = evaluate_adversarial(self.json_dataset, predictions)
-        value = {"f1" : value['af'], "exact_match": value['ae']}
+        print(value)
+        value = {"f1": value["af"], "exact_match": value["ae"]}
         return value

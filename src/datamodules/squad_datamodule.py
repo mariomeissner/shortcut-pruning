@@ -178,6 +178,10 @@ class SquadDatamodule(LightningDataModule):
             with open(json_add_sent_path) as _file:
                 self.json_add_sent = json.load(_file)["data"]
 
+            json_add_one_sent_path = self.hparams.data_path + "add_one_sent.json"
+            with open(json_add_one_sent_path) as _file:
+                self.json_add_one_sent = json.load(_file)["data"]
+
             # Select training samples if specificed
             if self.hparams.select_train_samples:
                 # datasets.Dataset slicing returns a dict
