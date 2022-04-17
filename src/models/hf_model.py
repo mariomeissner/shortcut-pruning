@@ -13,7 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import ReweightByTeacher
+from src.losses import ProductOfExpertsCross, ProductOfExpertsNLL, ReweightByTeacher
 
 log = utils.get_logger(__name__)
 
@@ -28,7 +28,7 @@ class SequenceClassificationTransformer(LightningModule):
         self,
         huggingface_model: str,
         num_labels: int,
-        use_teacher_probs: bool,
+        use_bias_probs: bool,
         loss_fn: str = "crossentropy",
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
@@ -60,6 +60,10 @@ class SequenceClassificationTransformer(LightningModule):
             self.loss_fn = torch.nn.CrossEntropyLoss()
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
+        elif loss_fn == "product-of-experts-cross":
+            self.loss_fn = ProductOfExpertsCross()
+        elif loss_fn == "product-of-experts-nll":
+            self.loss_fn = ProductOfExpertsNLL()
         else:
             raise ValueError("Unrecognized loss function name.")
 
@@ -92,9 +96,9 @@ class SequenceClassificationTransformer(LightningModule):
         logits, preds = self(batch)
         logits = logits.view(-1, self.hparams.num_labels)
         labels = batch["labels"].view(-1)
-        if self.hparams.use_teacher_probs:
-            teacher_probs = batch["teacher_probs"]
-            loss = self.loss_fn(logits, teacher_probs, labels)
+        if self.hparams.use_bias_probs:
+            bias_probs = batch["bias_probs"]
+            loss = self.loss_fn(logits, bias_probs, labels)
         else:
             loss = self.loss_fn(logits, labels)
         return loss, preds
@@ -118,7 +122,7 @@ class SequenceClassificationTransformer(LightningModule):
         logits, preds = self(batch)
         # log val metrics
         acc = self.val_acc(preds, batch["labels"])
-        # No loss for validation or test because of missing teacher_probs!!
+        # No loss for validation or test because of missing bias_probs!!
         # self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=False)
 

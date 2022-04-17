@@ -9,7 +9,7 @@ seed: null
 
 model:
   loss_fn: "reweight-by-teacher"
-  use_teacher_probs: True
+  use_bias_probs: True
 
 datamodule:
   bias_path: null

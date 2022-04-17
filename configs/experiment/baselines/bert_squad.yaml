@@ -7,12 +7,6 @@ defaults:
 name: baselines/bert/squad
 seed: 888
 
-callbacks:
-  model_checkpoint:
-    monitor: null
-  hans_evaluation:
-    enabled: False
-    
 trainer:
   num_sanity_val_steps: 0
   max_epochs: 2

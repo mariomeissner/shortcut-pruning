@@ -22,7 +22,7 @@ model:
   batch_size: ${datamodule.batch_size}
   loss_fn:
     _target_: torch.nn.CrossEntropyLoss
-  use_teacher_probs: False
+  use_bias_probs: False
 
 datamodule:
   _target_: src.datamodules.hf_datamodule.HFDataModule

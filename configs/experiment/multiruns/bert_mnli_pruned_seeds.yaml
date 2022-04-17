@@ -33,7 +33,7 @@ model:
   loss_fn:
     _target_: torch.nn.CrossEntropyLoss
   num_labels: 3
-  use_teacher_probs: False
+  use_bias_probs: False
   sparse_args: ${pruning}
   freeze_weights: False
   huggingface_model: "bert-base-uncased"

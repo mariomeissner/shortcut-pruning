@@ -8,6 +8,7 @@ import os
 import torch
 import random
 import datasets
+from bias_utils import load_bias_probs
 from src.datamodules import squad_processing
 from datasets.dataset_dict import DatasetDict
 from pathlib import Path
@@ -28,10 +29,9 @@ log = get_logger(__name__)
 # https://github.com/robinjia/adversarial-squad
 
 
-class SquadDatamodule(LightningDataModule):
+class SquadDataModule(LightningDataModule):
     def __init__(
         self,
-        output_dir: str,
         data_path: str,
         tokenizer_name: str,
         n_best_size: int,
@@ -39,6 +39,7 @@ class SquadDatamodule(LightningDataModule):
         max_answer_length: int,
         version_2_with_negative: bool,
         null_score_diff_threshold: float,
+        bias_path: str = None,
         padding: str = "max_length",
         select_train_samples: int = 0,
         batch_size: int = 16,
@@ -66,7 +67,7 @@ class SquadDatamodule(LightningDataModule):
         self.multiprocessing_context = get_context("loky") if num_workers > 1 else None
 
         self.keep_columns = [
-            "idx",
+            # "id",
             "input_ids",
             "attention_mask",
             "token_type_ids",
@@ -98,16 +99,31 @@ class SquadDatamodule(LightningDataModule):
             "padding": hparams.padding,
         }
 
-        # Remove all unnecessary columns
-        # keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
 
         prepare_train_features = partial(squad_processing.prepare_train_features, **fn_kwargs)
+        remove_cols = list(dataset["train"].column_names)
         dataset["train"] = dataset["train"].map(
             prepare_train_features,
             batched=True,
             num_proc=1,
-            remove_columns=dataset["train"].column_names,
+            remove_columns=remove_cols,
         )
+
+        # Add integer idx
+        dataset["train"] = dataset["train"].map(
+            lambda example, idx: {"idx" : idx},
+            with_indices=True,
+        )
+
+        # Append bias if provided
+        if hparams.bias_path:
+            log.info(f"Appending bias from file {hparams.bias_path}")
+            bias_dict = load_bias_probs(hparams.bias_path)
+
+            dataset["train"] = dataset["train"].map(
+                SquadDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict}
+            )
+
         fn_kwargs.pop("answer_column_name")
         # prepare_validation_features = partial(
         #     squad_processing.prepare_validation_features, example_id_strings=example_id_strings, **fn_kwargs
@@ -146,6 +162,14 @@ class SquadDatamodule(LightningDataModule):
         # dataset["train"].set_format("torch")
         # dataset["validation"].set_format("torch")
         return dataset
+
+    @staticmethod
+    def append_bias(example, bias_dict):
+        start_bias = bias_dict["start_logits"][str(example["idx"])]
+        end_bias = bias_dict["end_logits"][str(example["idx"])]
+        example["start_bias"] = start_bias
+        example["end_bias"] = end_bias
+        return example
 
     def prepare_data(self):
         """
@@ -228,6 +252,17 @@ class SquadDatamodule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
             shuffle=True,
+        )
+
+    def train_dataloader_noshuffle(self):
+        return DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
+            dataset=self.dataset["train"],
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            collate_fn=self.collator_fn,
+            shuffle=False,
         )
 
     def val_dataloader(self):

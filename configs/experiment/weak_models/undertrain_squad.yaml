@@ -4,16 +4,14 @@ defaults:
   - override /model: bert_squad.yaml
   - override /datamodule: squad.yaml
 
-name: weak/tinybert/squad
+name: weak/undertrain/bert/squad
 seed: 888
-
-model:
-  huggingface_model: "prajjwal1/bert-tiny"
 
 datamodule:
   batch_size: 16
+  select_train_samples: 500
 
 trainer:
   num_sanity_val_steps: 0
-  max_epochs: 3
+  max_epochs: 5 # I'll assume 5 works better everywhere
   gpus: 1

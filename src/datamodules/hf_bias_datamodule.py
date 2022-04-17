@@ -14,7 +14,7 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers import DataCollatorWithPadding
 from src.datamodules.hf_datamodule import HFDataModule
 from src.utils import utils
-from bias_utils import load_bias, load_teacher_probs
+from bias_utils import load_bias, load_bias_probs
 
 log = utils.get_logger(__name__)
 
@@ -24,7 +24,7 @@ class HFBiasDataModule(HFDataModule):
 
         super().__init__(**kwargs)
         self.bias_path = Path(bias_path)
-        self.keep_columns += ["bias", "teacher_probs"]
+        self.keep_columns += ["bias", "bias_probs"]
         self.save_hyperparameters(logger=False)
 
     @staticmethod
@@ -33,7 +33,7 @@ class HFBiasDataModule(HFDataModule):
             bias = [0, 0, 0]
         else:
             bias = bias_dict[str(example["idx"])]
-        example["teacher_probs"] = bias
+        example["bias_probs"] = bias
         return example
 
     @staticmethod
@@ -55,7 +55,7 @@ class HFBiasDataModule(HFDataModule):
 
         # Append bias!
         log.info(f"Appending bias from file {hparams.bias_path}.")
-        bias_dict = load_teacher_probs(hparams.bias_path)
+        bias_dict = load_bias_probs(hparams.bias_path)
 
         dataset["train"] = dataset["train"].map(
             HFBiasDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": False}

@@ -5,4 +5,4 @@ huggingface_model: "bert-base-uncased"
 learning_rate: 2e-5
 batch_size: ${datamodule.batch_size}
 loss_fn: "crossentropy"
-use_teacher_probs: False
+use_bias_probs: False

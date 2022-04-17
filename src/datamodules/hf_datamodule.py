@@ -15,7 +15,7 @@ from torchvision.transforms import transforms
 from transformers import DataCollatorWithPadding
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from bias_utils import load_bias, load_teacher_probs
+from bias_utils import load_bias, load_bias_probs
 from src.utils.utils import get_logger
 
 log = get_logger(__name__)
@@ -60,7 +60,7 @@ class HFDataModule(LightningDataModule):
             "token_type_ids",
             "labels",
             "bias",
-            "teacher_probs",
+            "bias_probs",
         ]
 
     @property
@@ -90,7 +90,7 @@ class HFDataModule(LightningDataModule):
         # Append bias if provided
         if hparams.bias_path:
             log.info(f"Appending bias from file {hparams.bias_path}.")
-            bias_dict = load_teacher_probs(hparams.bias_path)
+            bias_dict = load_bias_probs(hparams.bias_path)
 
             dataset["train"] = dataset["train"].map(
                 HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": False}
@@ -107,8 +107,8 @@ class HFDataModule(LightningDataModule):
         dataset["train"].set_format("torch", columns=keep_columns, output_all_columns=False)
 
         keep_columns.remove("idx")
-        if "teacher_probs" in keep_columns:
-            keep_columns.remove("teacher_probs")
+        if "bias_probs" in keep_columns:
+            keep_columns.remove("bias_probs")
 
         for key in dataset.keys():
             if key != "train":
@@ -133,7 +133,7 @@ class HFDataModule(LightningDataModule):
             bias = [0, 0, 0]
         else:
             bias = bias_dict[str(example["idx"])]
-        example["teacher_probs"] = bias
+        example["bias_probs"] = bias
         return example
 
     def prepare_data(self):

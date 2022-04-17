@@ -4,14 +4,15 @@ defaults:
   - override /model: bert_squad.yaml
   - override /datamodule: squad.yaml
 
-name: weak/tinybert/squad
-seed: 888
+name: debiasing/{type}/bert/squad
+seed: null
 
 model:
-  huggingface_model: "prajjwal1/bert-tiny"
+  use_bias_probs: True
+  # loss_fn: "reweight-by-teacher"
 
 datamodule:
-  batch_size: 16
+  bias_path: null
 
 trainer:
   num_sanity_val_steps: 0

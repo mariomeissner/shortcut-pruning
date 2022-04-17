@@ -18,7 +18,7 @@ model:
   loss_fn:
     _target_: src.losses.ReweightByTeacher
   num_labels: 3
-  use_teacher_probs: True
+  use_bias_probs: True
   sparse_args: ${pruning}
   freeze_weights: True
   huggingface_model: "bert-base-uncased"

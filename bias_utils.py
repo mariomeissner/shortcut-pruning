@@ -52,7 +52,7 @@ def load_bias(bias_name, custom_path=None) -> Dict[str, np.ndarray]:
         raise Exception("invalid bias name")
 
 
-def load_teacher_probs(file_path: str):
+def load_bias_probs(file_path: str):
 
     with open(file_path, "r") as teacher_file:
         all_lines = teacher_file.read()

@@ -29,7 +29,7 @@ class QuestionAnsweringTransformer(LightningModule):
     def __init__(
         self,
         huggingface_model: str,
-        use_teacher_probs: bool,
+        use_bias_probs: bool,
         loss_fn: str = "crossentropy",
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
@@ -44,11 +44,11 @@ class QuestionAnsweringTransformer(LightningModule):
         # Load model and add classification head
         self.model = AutoModelForQuestionAnswering.from_pretrained(huggingface_model)
 
-        # loss function (assuming single-label multi-class classification)
-        if loss_fn == "crossentropy":
-            self.loss_fn = torch.nn.CrossEntropyLoss()
-        elif loss_fn == "reweight-by-teacher":
-            self.loss_fn = ReweightByTeacher()
+        # # loss function (assuming single-label multi-class classification)
+        # if loss_fn == "crossentropy":
+        #     self.loss_fn = torch.nn.CrossEntropyLoss()
+        # elif loss_fn == "reweight-by-teacher":
+        #     self.loss_fn = ReweightByTeacher()
 
         self._total_training_steps = None
 
@@ -63,13 +63,36 @@ class QuestionAnsweringTransformer(LightningModule):
         return outputs
 
     def step(self, batch: Dict[str, torch.tensor]):
-        """Implement debiasing here later."""
         return self(batch)
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
+
         outputs = self.step(batch)
-        self.log("train/loss", outputs.loss, on_step=True, on_epoch=False, prog_bar=False)
-        return {"loss": outputs.loss}
+
+        if self.hparams.use_bias_probs:
+
+            # Add log softmax
+            start_logits = torch.nn.functional.log_softmax(outputs.start_logits, dim=1)
+            end_logits = torch.nn.functional.log_softmax(outputs.end_logits, dim=1)
+
+            start_logits = start_logits + batch["start_bias"]
+            end_logits = end_logits + batch["end_bias"]
+
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions = batch["start_positions"].clamp(0, ignored_index)
+            end_positions = batch["end_positions"].clamp(0, ignored_index)
+
+            loss_fct = torch.nn.CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            loss = (start_loss + end_loss) / 2
+
+        else:
+            loss = outputs.loss
+
+        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=False)
+        return {"loss": loss}
 
     def training_epoch_end(self, outputs: List[Any]):
         pass
