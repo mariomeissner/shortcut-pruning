@@ -6,7 +6,6 @@ defaults:
 
 name: weak/tinybert/fever
 seed: 888
-test_after_training: False
 
 datamodule:
   batch_size: 32

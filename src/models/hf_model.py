@@ -13,7 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import ProductOfExpertsCross, ProductOfExpertsNLL, ReweightByTeacher
+from src.losses import ProductOfExperts, ReweightByTeacher
 
 log = utils.get_logger(__name__)
 
@@ -60,10 +60,8 @@ class SequenceClassificationTransformer(LightningModule):
             self.loss_fn = torch.nn.CrossEntropyLoss()
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
-        elif loss_fn == "product-of-experts-cross":
-            self.loss_fn = ProductOfExpertsCross()
-        elif loss_fn == "product-of-experts-nll":
-            self.loss_fn = ProductOfExpertsNLL()
+        elif loss_fn == "product-of-experts":
+            self.loss_fn = ProductOfExperts()
         else:
             raise ValueError("Unrecognized loss function name.")
 

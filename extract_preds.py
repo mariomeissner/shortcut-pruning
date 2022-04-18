@@ -56,7 +56,7 @@ def extract_preds(
     else:
         model_class = SequenceClassificationTransformer
 
-    model = model_class.load_from_checkpoint(checkpoint_path)
+    model = model_class.load_from_checkpoint(checkpoint_path, use_bias_probs=False)
     tokenizer = AutoTokenizer.from_pretrained(model.hparams.huggingface_model)
 
     def preprocess_func(examples: dict):

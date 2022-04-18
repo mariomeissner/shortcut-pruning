@@ -71,6 +71,11 @@ class QuestionAnsweringTransformer(LightningModule):
 
         if self.hparams.use_bias_probs:
 
+            # if len(start_positions.size()) > 1:
+            #     start_positions = start_positions.squeeze(-1)
+            # if len(end_positions.size()) > 1:
+            #     end_positions = end_positions.squeeze(-1)
+
             # Add log softmax
             start_logits = torch.nn.functional.log_softmax(outputs.start_logits, dim=1)
             end_logits = torch.nn.functional.log_softmax(outputs.end_logits, dim=1)
@@ -126,8 +131,12 @@ class QuestionAnsweringTransformer(LightningModule):
         test2_metric_dict = self.test2_metric.compute()
         self.log("test/addsent/exact_match", test1_metric_dict["exact_match"], on_epoch=True)
         self.log("test/addsent/f1", test1_metric_dict["f1"], on_epoch=True)
+        # self.log("test/addsent/original_exact_match", test1_metric_dict["original_exact_match"], on_epoch=True)
+        # self.log("test/addsent/original_f1", test1_metric_dict["original_f1"], on_epoch=True)
         self.log("test/addonesent/exact_match", test2_metric_dict["exact_match"], on_epoch=True)
         self.log("test/addonesent/f1", test2_metric_dict["f1"], on_epoch=True)
+        # self.log("test/addonesent/original_exact_match", test2_metric_dict["original_exact_match"], on_epoch=True)
+        # self.log("test/addonesent/original_f1", test2_metric_dict["original_f1"], on_epoch=True)
 
     def on_test_epoch_start(self) -> None:
         self.test1_metric.reset()
@@ -294,5 +303,5 @@ class AdversarialSquadMetric(Metric):
         # exit()
         value = evaluate_adversarial(self.json_dataset, predictions)
         print(value)
-        value = {"f1": value["af"], "exact_match": value["ae"]}
+        value = {"f1": value["af"], "exact_match": value["ae"], "original_f1": value["of"], "original_exact_match" : value["oe"]}
         return value
