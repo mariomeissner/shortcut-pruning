@@ -4,6 +4,7 @@ tensorboard.out
 logs 
 tmp
 nohup.out
+data_local
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
