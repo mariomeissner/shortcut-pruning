@@ -14,5 +14,4 @@ datamodule:
 trainer:
   max_epochs: 5 # Paper said 3, GitHub doesn't say... I'm guessing it's also 5?
   val_check_interval: ${trainer.max_epochs}
-  limit_val_batches: 0.0
   gpus: 1

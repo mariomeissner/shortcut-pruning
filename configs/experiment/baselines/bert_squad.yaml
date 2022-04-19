@@ -9,5 +9,5 @@ seed: 888
 
 trainer:
   num_sanity_val_steps: 0
-  max_epochs: 2
+  max_epochs: 3
   gpus: 1

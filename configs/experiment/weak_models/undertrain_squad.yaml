@@ -13,5 +13,6 @@ datamodule:
 
 trainer:
   num_sanity_val_steps: 0
+  val_check_interval: ${trainer.max_epochs}
   max_epochs: 5 # I'll assume 5 works better everywhere
   gpus: 1
