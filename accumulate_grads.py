@@ -51,7 +51,13 @@ def extract_preds(
 
     model_class = SequenceClassificationTransformer
     # model = model_class.load_from_checkpoint(checkpoint_path, use_bias_probs=False)
-    model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased")
+    model = SequenceClassificationTransformer(
+        "bert-base-uncased",
+        num_labels=3,
+        use_bias_probs=False,
+        loss_fn="crossentropy",
+        batch_size=batch_size,
+    )
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
     def preprocess_func(examples: dict):
@@ -81,21 +87,23 @@ def extract_preds(
     device = torch.device("cpu")
     model.to(device)
 
+    print("Running model over dataset...")
     for idx, batch in enumerate(tqdm(train_dataloader)):
-
         batch = {k: v.to(device) for k, v in batch.items()}
         loss, preds = model.step(batch)
-        loss.backward() # Accumulate gradients
-            
+        loss.backward()  # Accumulate gradients
         if idx == 2:
             break
 
+    print("Reading gradients...")
     grads_dict = {}
-    for name, param in model.named_parameters():
-        grads_dict[name] = param.grad
+    for name, param in tqdm(model.named_parameters()):
+        grads_dict[name] = param.grad.detach().cpu().tolist()
 
+    print("Saving gradients file...")
     with open(save_path, "w") as _file:
-        _file.write(json.dumps(grads_dict), indent=2)
+        _file.write(json.dumps(grads_dict, indent=None))
+
 
 if __name__ == "__main__":
     fire.Fire(extract_preds)
