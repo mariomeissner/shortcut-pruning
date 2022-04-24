@@ -1,5 +1,6 @@
 import os
 import random
+import math
 from argparse import ArgumentError
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -89,18 +90,27 @@ class HFDataModule(LightningDataModule):
 
         # Append bias if provided
         if hparams.bias_path:
-            log.info(f"Appending bias from file {hparams.bias_path}.")
-            bias_dict = load_bias_probs(hparams.bias_path)
+            if hparams.bias_path == "random":
+                log.info("Appending random probability vectors.")
+                special = "random"
+                bias_dict = None
+            elif hparams.bias_path == "flat":
+                log.info("Appending flat probability vectors.")
+                special = "flat"
+                bias_dict = None
+            else:
+                special = False
+                log.info(f"Appending bias from file {hparams.bias_path}.")
+                bias_dict = load_bias_probs(hparams.bias_path)
 
             dataset["train"] = dataset["train"].map(
-                HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": False}
+                HFDataModule.append_bias,
+                fn_kwargs={
+                    "bias_dict": bias_dict,
+                    "special": special,
+                    "num_labels": hparams.num_labels,
+                },
             )
-            # dataset["validation"] = dataset["validation"].map(
-            #     HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": True}
-            # )
-            # dataset["test"] = dataset["test"].map(
-            #     HFDataModule.append_bias, fn_kwargs={"bias_dict": bias_dict, "empty": True}
-            # )
 
         # Set torch format
         keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
@@ -128,11 +138,16 @@ class HFDataModule(LightningDataModule):
         return result
 
     @staticmethod
-    def append_bias(example, bias_dict, empty=False):
-        if empty:
-            bias = [0, 0, 0]
+    def append_bias(example, bias_dict, special=None, num_labels=3):
+        if special == "random":
+            random_vector = [random.random() for _ in range(num_labels)]
+            vector_sum = sum(random_vector)
+            bias = [value / vector_sum for value in random_vector]
+        elif special == "flat":
+            bias = [1 / num_labels for _ in range(num_labels)]
         else:
             bias = bias_dict[str(example["idx"])]
+        # assert math.isclose(sum(bias), 1.0)
         example["bias_probs"] = bias
         return example
 
