@@ -13,7 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import ProductOfExperts, ReweightByTeacher
+from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher
 
 log = utils.get_logger(__name__)
 
@@ -35,6 +35,7 @@ class SequenceClassificationTransformer(LightningModule):
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
         batch_size: int = 64,
+        generalized_loss_q = 0.7,
     ):
         super().__init__()
 
@@ -58,6 +59,8 @@ class SequenceClassificationTransformer(LightningModule):
         # loss function (assuming single-label multi-class classification)
         if loss_fn == "crossentropy":
             self.loss_fn = torch.nn.CrossEntropyLoss()
+        elif loss_fn == "generalized-crossentropy":
+            self.loss_fn = GeneralizedCELoss(q=self.hparams.generalized_loss_q)
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
         elif loss_fn == "product-of-experts":
@@ -212,10 +215,17 @@ class SequenceClassificationTransformer(LightningModule):
         print(f"{self.hparams.learning_rate =}")
         optimizer = AdamW(optim_groups, lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
 
+        total_steps = self.total_training_steps()
+        # Check if warump is a number or a ratio
+        if self.hparams.warmup_steps == int(self.hparams.warmup_steps):
+            warmup_steps = self.hparams.warmup_steps # number
+        else:
+            warmup_steps = total_steps * self.hparams.warmup_steps # ratio
+
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=self.hparams.warmup_steps,
-            num_training_steps=self.total_training_steps(),
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_steps,
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         return [optimizer], [scheduler]

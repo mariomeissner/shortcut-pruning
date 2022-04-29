@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - override /model: bert_base_uncased.yaml
+  - override /datamodule: mnli.yaml
+
+name: weak/new_undertrain_with_limit/bert/mnli
+seed: 888
+
+datamodule:
+  batch_size: 32
+
+trainer:
+  limit_train_batches: 156
+  max_epochs: 1
+  gpus: 1

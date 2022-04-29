@@ -1,0 +1,57 @@
+# model_checkpoint:
+#   # _target_: src.callbacks.hf_checkpoint.ModelCheckpointWithCompiling
+#   _target_: pytorch_lightning.callbacks.ModelCheckpoint
+#   monitor: null # only save last epoch model
+#   save_top_k: 0 # only save last epoch model
+#   save_last: True # last epoch model
+#   verbose: False
+#   dirpath: "./" # save "last.ckpt" into the experiment directory
+
+model_checkpoint:
+  _target_: pytorch_lightning.callbacks.ModelCheckpoint
+  # monitor: "val/acc" # name of the logged metric which determines when model is improving
+  monitor: null
+  mode: "max" # "max" means higher metric value is better, can be also "min"
+  save_top_k: 0 # save k best models (determined by above metric)
+  save_last: True # additionaly always save model from last epoch
+  verbose: False
+  dirpath: "checkpoints/"
+  filename: "epoch_{epoch:03d}"
+  auto_insert_metric_name: False
+
+# hans_evaluation:
+#   _target_: src.callbacks.hans_evaluation.HansEvaluation
+#   split_level: "global"
+#   tokenizer_name: ${model.huggingface_model}
+
+record_preds:
+  _target_: src.callbacks.record_preds.RecordPreds
+
+model_summary:
+  _target_: pytorch_lightning.callbacks.ModelSummary
+  max_depth: 1
+
+rich_progress_bar:
+  _target_: pytorch_lightning.callbacks.RichProgressBar
+
+lr_monitor:
+  _target_: pytorch_lightning.callbacks.LearningRateMonitor
+  logging_interval: step
+
+watch_model:
+  _target_: src.callbacks.wandb_callbacks.WatchModel
+  log: "all"
+  log_freq: 100
+
+config_files:
+  _target_: src.callbacks.wandb_callbacks.UploadConfigFiles
+
+upload_code_as_artifact:
+  _target_: src.callbacks.wandb_callbacks.UploadCodeAsArtifact
+  code_dir: ${work_dir}/src
+  use_git: False
+# log_f1_precision_recall_heatmap:
+#   _target_: src.callbacks.wandb_callbacks.LogF1PrecRecHeatmap
+
+# log_confusion_matrix:
+#   _target_: src.callbacks.wandb_callbacks.LogConfusionMatrix

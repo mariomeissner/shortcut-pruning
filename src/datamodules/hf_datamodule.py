@@ -195,7 +195,7 @@ class HFDataModule(LightningDataModule):
     def get_test_names(self) -> "list[str]":
         raise NotImplementedError
 
-    def train_dataloader(self):
+    def train_dataloader(self, shuffle=True):
         return DataLoader(
             multiprocessing_context=self.multiprocessing_context,
             dataset=self.dataset["train"],
@@ -203,7 +203,17 @@ class HFDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collator_fn,
-            shuffle=True,
+            shuffle=shuffle,
+        )
+    def minitrain_dataloader(self, shuffle=True):
+        return DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
+            dataset=datasets.Dataset.from_dict(self.dataset["train"][:1000]),
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            collate_fn=self.collator_fn,
+            shuffle=shuffle,
         )
 
     def val_dataloader(self):
