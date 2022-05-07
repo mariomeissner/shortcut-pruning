@@ -42,4 +42,4 @@ class GeneralizedCELoss(nn.Module):
 
         loss = (F.cross_entropy(logits, labels, reduction="none") * loss_weight)
 
-        return loss
+        return loss.mean()

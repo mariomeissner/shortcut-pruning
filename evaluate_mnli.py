@@ -22,9 +22,7 @@ def evaluate_on_mnli(
     pruned_model: bool = False,
     do_matched: bool = True,
     do_mismatched: bool = False,
-    extract_train_preds: bool = False,
-    save_path: str = None,
-    # data_path: str = "data/mnli-tokenized",
+    do_negation_subsets: bool = False,
     max_length: int = 128,
     batch_size: int = 256,
 ):
@@ -35,7 +33,8 @@ def evaluate_on_mnli(
     else:
         model_class = SequenceClassificationTransformer
 
-    model = model_class.load_from_checkpoint(checkpoint_path)
+    print(f"Loading model from {checkpoint_path}.")
+    model = model_class.load_from_checkpoint(checkpoint_path, use_bias_probs=False)
 
     # Load dataset
     mnli: DatasetDict = datasets.load_dataset("glue", "mnli")
@@ -74,6 +73,9 @@ def evaluate_on_mnli(
         collate_fn=DataCollatorWithPadding(tokenizer=tokenizer),
     )
 
+    with open("data/subsets/mnli_negation_indices.json") as _file:
+        negation_indices = json.load(_file)
+
     model.eval()
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model.to(device)
@@ -93,6 +95,19 @@ def evaluate_on_mnli(
         accuracy = np.mean(predictions == targets)
         print(f"MNLI Validation Matched score: {accuracy}")
 
+        if do_negation_subsets:
+            neg_cont_acc = np.mean(
+                predictions[negation_indices["val_m_conts"]] == targets[negation_indices["val_m_conts"]]
+            )
+            neg_ent_acc = np.mean(
+                predictions[negation_indices["val_m_ents"]] == targets[negation_indices["val_m_ents"]]
+            )
+            all_matched_indices = negation_indices["val_m_conts"] + negation_indices["val_m_ents"]
+            neg_acc = np.mean(predictions[all_matched_indices] == targets[all_matched_indices])
+            print(f"MNLI Validation Matched Negation with Contradiction Subset: {neg_cont_acc}")
+            print(f"MNLI Validation Matched Negation with Entailment Subset: {neg_ent_acc}")
+            print(f"MNLI Validation Matched Negation with Cont + Ent Subset: {neg_acc}")
+
     # Run mismatched evaluation
     if do_mismatched:
         predictions = []
@@ -108,20 +123,18 @@ def evaluate_on_mnli(
         accuracy = np.mean(predictions == targets)
         print(f"MNLI Validation Mismatched score: {accuracy}")
 
-    if extract_train_preds:
-        predictions = {}
-        for idx, batch in enumerate(tqdm(train_dataloader)):
-            batch = {k: v.to(device) for k, v in batch.items()}
-            with torch.no_grad():
-                logits, preds = model(batch)
-                soft_preds = softmax(logits, dim=1).detach().cpu().tolist()
-                idxs = batch['idx'].detach().cpu().tolist()
-                for idx, soft_pred in zip(idxs, soft_preds):
-                    predictions[idx] = soft_pred
-                # import ipdb; ipdb.set_trace()
-
-        with open(save_path, "w") as _file:
-            _file.write(json.dumps(predictions))
+        if do_negation_subsets:
+            neg_cont_acc = np.mean(
+                predictions[negation_indices["val_mm_conts"]] == targets[negation_indices["val_mm_conts"]]
+            )
+            neg_ent_acc = np.mean(
+                predictions[negation_indices["val_mm_ents"]] == targets[negation_indices["val_mm_ents"]]
+            )
+            all_matched_indices = negation_indices["val_mm_conts"] + negation_indices["val_mm_ents"]
+            neg_acc = np.mean(predictions[all_matched_indices] == targets[all_matched_indices])
+            print(f"MNLI Validation Mismatched Negation with Contradiction Subset: {neg_cont_acc}")
+            print(f"MNLI Validation Mismatched Negation with Entailment Subset: {neg_ent_acc}")
+            print(f"MNLI Validation Mismatched Negation with Cont + Ent Subset: {neg_acc}")
 
 
 if __name__ == "__main__":

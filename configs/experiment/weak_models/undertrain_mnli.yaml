@@ -13,5 +13,4 @@ datamodule:
 
 trainer:
   max_epochs: 5 # Paper said 3, GitHub repo said 5!
-  val_check_interval: ${trainer.max_epochs}
   gpus: 1
