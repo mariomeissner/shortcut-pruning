@@ -26,20 +26,21 @@ def extract_preds(
     save_path: str,
     dataset_name: str,
     pruned_model: bool = False,
+    subset: str = "train",
     max_length: int = 128,
     batch_size: int = 256,
 ):
 
     if dataset_name == "mnli":
-        dataset = datasets.load_dataset("glue", "mnli")["train"].rename_column("label", "labels")
+        dataset = datasets.load_dataset("glue", "mnli").rename_column("label", "labels")
         sent1 = "premise"
         sent2 = "hypothesis"
     elif dataset_name == "qqp":
-        dataset = datasets.load_dataset("glue", "qqp")["train"].rename_column("label", "labels")
+        dataset = datasets.load_dataset("glue", "qqp").rename_column("label", "labels")
         sent1 = "question1"
         sent2 = "question2"
     elif dataset_name == "fever":
-        dataset = datasets.load_dataset("json", data_files="data/fever/fever_train.jsonl")["train"]
+        dataset = datasets.load_dataset("json", data_files="data/fever/fever_train.jsonl")
         dataset = (
             dataset.map(lambda sample: {"labels": FEVER_LABEL_MAP[sample["gold_label"]]})
             .remove_columns(["weight"])
@@ -77,8 +78,11 @@ def extract_preds(
         ],
     )
 
-    train_dataloader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
+    dataloader = DataLoader(
+        dataset[subset],
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=DataCollatorWithPadding(tokenizer=tokenizer)
     )
 
     model.eval()
@@ -86,7 +90,7 @@ def extract_preds(
     model.to(device)
 
     predictions = {}
-    for idx, batch in enumerate(tqdm(train_dataloader)):
+    for idx, batch in enumerate(tqdm(dataloader)):
         batch = {k: v.to(device) for k, v in batch.items()}
         with torch.no_grad():
             logits, preds = model(batch)
@@ -94,7 +98,6 @@ def extract_preds(
             idxs = batch["idx"].detach().cpu().tolist()
             for idx, soft_pred in zip(idxs, soft_preds):
                 predictions[idx] = soft_pred
-            # import ipdb; ipdb.set_trace()
 
     with open(save_path, "w") as _file:
         _file.write(json.dumps(predictions))
