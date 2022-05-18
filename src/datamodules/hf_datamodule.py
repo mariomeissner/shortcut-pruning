@@ -116,7 +116,8 @@ class HFDataModule(LightningDataModule):
         keep_columns = [column for column in keep_columns if column in dataset["train"].column_names]
         dataset["train"].set_format("torch", columns=keep_columns, output_all_columns=False)
 
-        keep_columns.remove("idx")
+        if "idx" in keep_columns:
+            keep_columns.remove("idx")
         if "bias_probs" in keep_columns:
             keep_columns.remove("bias_probs")
 

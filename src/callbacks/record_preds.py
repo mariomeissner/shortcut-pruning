@@ -3,6 +3,7 @@ import numpy as np
 import pytorch_lightning as pl
 from pathlib import Path
 from src.datamodules.hf_datamodule import HFDataModule
+from src.datamodules.snli_datamodule import SNLIDataModule
 from src.utils.utils import get_logger
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -15,32 +16,38 @@ class RecordPreds(ModelCheckpoint):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.counter = 0
+        self.snli = None
 
     @rank_zero_only
     def on_validation_epoch_end(self, trainer, pl_module):
 
-        train_dataloader = trainer.datamodule.train_dataloader(shuffle=False)
-        val_dataloader = trainer.datamodule.val_dataloader()
+        if not self.snli:
+            self.snli = SNLIDataModule(num_labels=3, sentence_1_name="premise", sentence_2_name="hypothesis", tokenizer_name=pl_module.hparams.huggingface_model)
+            self.snli.setup()
+
+        # train_dataloader = trainer.datamodule.train_dataloader(shuffle=False)
+        # val_dataloader = trainer.datamodule.val_dataloader()
+        val_dataloader = self.snli.val_dataloader()
         device = pl_module.device
         train_outputs = []
         val_outputs = []
 
-        # Extract train preds
-        for batch in train_dataloader:
-            batch = {k: v.to(device) for k, v in batch.items()}
-            train_outputs.append(pl_module(batch)[0])
-        train_outputs = torch.cat(train_outputs, dim=0).detach().cpu().numpy()
-        output_path = Path("train_predictions/")
-        output_path.mkdir(exist_ok=True)
-        output_path = output_path / f"{self.counter}"
-        np.save(output_path, train_outputs)
+        # # Extract train preds
+        # for batch in train_dataloader:
+        #     batch = {k: v.to(device) for k, v in batch.items()}
+        #     train_outputs.append(pl_module(batch)[0])
+        # train_outputs = torch.cat(train_outputs, dim=0).detach().cpu().numpy()
+        # output_path = Path("train_predictions/")
+        # output_path.mkdir(exist_ok=True)
+        # output_path = output_path / f"{self.counter}"
+        # np.save(output_path, train_outputs)
 
         # Extract validation preds
         for batch in val_dataloader:
             batch = {k: v.to(device) for k, v in batch.items()}
             val_outputs.append(pl_module(batch)[0])
         val_outputs = torch.cat(val_outputs, dim=0).detach().cpu().numpy()
-        output_path = Path("val_predictions/")
+        output_path = Path("snli_val_predictions/")
         output_path.mkdir(exist_ok=True)
         output_path = output_path / f"{self.counter}"
         np.save(output_path, val_outputs)
