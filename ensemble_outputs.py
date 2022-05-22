@@ -1,40 +1,50 @@
 import glob
 import json
-from multiprocessing.sharedctypes import Value
 import os
 from pathlib import Path
 import fire
+from tqdm import tqdm
 
 import numpy as np
 from scipy.special import softmax
 
 
-def ensemble_outputs(folder: str, method: str = "median"):
+def ensemble_outputs(folder: str, method: str = "median", squad=False):
 
     if not method in ("median", "mean"):
         raise ValueError("Unknown method.")
 
     path = Path(folder)
     outputs = []
-    mean_outputs = {}
 
     for filename in glob.glob(str(path / "*.json")):
-        with open(filename, 'r') as _file:
+        with open(filename, "r") as _file:
             outputs.append(json.load(_file))
 
-    for key in outputs[0]:
-        
-        zip_outputs = [output_dict[key] for output_dict in outputs]
-        array = np.array(zip_outputs)
-        if method == "median":
-            array = np.median(array, axis=0)
-        elif method == "mean":
-            array = np.mean(array, axis=0)
-        mean_output = array / array.sum()
-        mean_outputs[key] = mean_output.tolist()
+    def get_mean_outputs(outputs):
+        mean_outputs = {}
+        for key in tqdm(outputs[0]):
+            zip_outputs = [output_dict[key] for output_dict in outputs]
+            array = np.array(zip_outputs)
+            if method == "median":
+                array = np.median(array, axis=0)
+            elif method == "mean":
+                array = np.mean(array, axis=0)
+            mean_output = array / array.sum()
+            mean_outputs[key] = mean_output.tolist()
+        return mean_outputs
+
+    if squad:
+        start_logit_outputs = [output["start_logits"] for output in outputs]
+        end_logit_outputs = [output["end_logits"] for output in outputs]
+        start_mean_outputs = get_mean_outputs(start_logit_outputs)
+        end_mean_outputs = get_mean_outputs(end_logit_outputs)
+        mean_outputs = {"start_logits": start_mean_outputs, "end_logits": end_mean_outputs}
+    else:
+        mean_outputs = get_mean_outputs(outputs)
 
     print(json.dumps(mean_outputs))
 
+
 if __name__ == "__main__":
     fire.Fire(ensemble_outputs)
-            

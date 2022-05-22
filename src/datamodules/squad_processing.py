@@ -34,6 +34,10 @@ def prepare_train_features(
     examples: Any, tokenizer: PreTrainedTokenizerBase, pad_on_right: bool, question_column_name: str,
     context_column_name: str, answer_column_name: str, max_length: int, doc_stride: int, padding: str
 ):
+
+    # Fix truncation bug with RoBERTa (see https://github.com/huggingface/transformers/issues/12880)
+    examples[question_column_name] = [q.lstrip() for q in examples[question_column_name]]
+
     # Tokenize our examples with truncation and maybe padding, but keep the overflows using a stride. This results
     # in one example possible giving several features when a context is long, each of those features having a
     # context that overlaps a bit the context of the previous feature.
@@ -117,6 +121,10 @@ def prepare_validation_features(
     padding: str,
     example_id_strings: Dict[str, int],
 ):
+
+    # Fix truncation bug with RoBERTa (see https://github.com/huggingface/transformers/issues/12880)
+    examples[question_column_name] = [q.lstrip() for q in examples[question_column_name]]
+    
     # Tokenize our examples with truncation and maybe padding, but keep the overflows using a stride. This results
     # in one example possible giving several features when a context is long, each of those features having a
     # context that overlaps a bit the context of the previous feature.

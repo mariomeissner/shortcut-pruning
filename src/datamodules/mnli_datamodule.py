@@ -64,6 +64,7 @@ class MNLIDataModule(HFDataModule):
             {
                 "train": mnli["train"],
                 "validation": mnli["validation_matched"],
+                "validation_mismatched": mnli["validation_mismatched"],
                 "test_hans": hans["validation"],
                 "test_m_hard": m_hard["train"],
                 "test_mm_hard": mm_hard["train"],
@@ -72,7 +73,15 @@ class MNLIDataModule(HFDataModule):
         return dataset
 
     def test_dataloader(self):
-
+        val_mismatched_dataloader = DataLoader(
+            multiprocessing_context=self.multiprocessing_context,
+            dataset=self.dataset["validation_mismatched"],
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            collate_fn=self.collator_fn,
+            shuffle=False,
+        )
         hans_dataloader = DataLoader(
             multiprocessing_context=self.multiprocessing_context,
             dataset=self.dataset["test_hans"],
@@ -100,7 +109,7 @@ class MNLIDataModule(HFDataModule):
             collate_fn=self.collator_fn,
             shuffle=False,
         )
-        return [hans_dataloader, m_hard_dataloader, mm_hard_dataloader]
+        return [val_mismatched_dataloader, hans_dataloader, m_hard_dataloader, mm_hard_dataloader]
 
     def get_test_names(self) -> "list[str]":
-        return ["hans", "m_hard", "mm_hard"]
+        return ["val_mismatched", "hans", "m_hard", "mm_hard"]

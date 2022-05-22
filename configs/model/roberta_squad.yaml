@@ -1,10 +1,9 @@
-_target_: src.models.hf_model.SequenceClassificationTransformer
+_target_: src.models.squad_model.QuestionAnsweringTransformer
 
-num_labels: ${datamodule.num_labels}
 huggingface_model: "roberta-large"
 learning_rate: 2e-5
+batch_size: ${datamodule.batch_size}
 warmup_steps: 0.20 # RoBERTa paper said 6% over 10 epochs with early stopping (so 20)
 weight_decay: 0.1
-batch_size: ${datamodule.batch_size}
 loss_fn: "crossentropy"
 use_bias_probs: False
