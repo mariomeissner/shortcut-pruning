@@ -13,7 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher
+from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher, ReweightByTeacherScaled
 
 log = utils.get_logger(__name__)
 
@@ -63,6 +63,8 @@ class SequenceClassificationTransformer(LightningModule):
             self.loss_fn = GeneralizedCELoss(q=self.hparams.generalized_loss_q)
         elif loss_fn == "reweight-by-teacher":
             self.loss_fn = ReweightByTeacher()
+        elif loss_fn == "reweight-by-teacher-scaled":
+            self.loss_fn = ReweightByTeacherScaled()
         elif loss_fn == "product-of-experts":
             self.loss_fn = ProductOfExperts()
         else:

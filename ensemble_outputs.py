@@ -2,6 +2,7 @@ import glob
 import json
 import os
 from pathlib import Path
+import sys
 import fire
 from tqdm import tqdm
 
@@ -11,7 +12,7 @@ from scipy.special import softmax
 
 def ensemble_outputs(folder: str, method: str = "median", squad=False):
 
-    if not method in ("median", "mean"):
+    if not method in ("median", "mean", "max"):
         raise ValueError("Unknown method.")
 
     path = Path(folder)
@@ -19,6 +20,7 @@ def ensemble_outputs(folder: str, method: str = "median", squad=False):
 
     for filename in glob.glob(str(path / "*.json")):
         with open(filename, "r") as _file:
+            print(f"Loading file {filename}", file=sys.stderr)
             outputs.append(json.load(_file))
 
     def get_mean_outputs(outputs):
@@ -30,6 +32,8 @@ def ensemble_outputs(folder: str, method: str = "median", squad=False):
                 array = np.median(array, axis=0)
             elif method == "mean":
                 array = np.mean(array, axis=0)
+            elif method == "max":
+                array = np.max(array, axis=0)
             mean_output = array / array.sum()
             mean_outputs[key] = mean_output.tolist()
         return mean_outputs

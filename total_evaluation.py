@@ -109,46 +109,46 @@ def total_evaluation(
     print(
         ",".join(
             [
-                # "MNLI ValM Acc",
-                # "MNLI ValM NegContLevel",
-                # "MNLI ValM NegEntLevel",
-                # "MNLI ValM NegContAcc",
-                # "MNLI ValM NegEntAcc",
-                # "MNLI ValM LexContLevel",
-                # "MNLI ValM LexEntLevel",
-                # "MNLI ValM LexContAcc",
-                # "MNLI ValM LexEntAcc",
-                # "MNLI ValMM Acc",
-                # "MNLI ValMM NegContLevel",
-                # "MNLI ValMM NegEntLevel",
-                # "MNLI ValMM NegContAcc",
-                # "MNLI ValMM NegEntAcc",
-                # "MNLI ValMM LexContLevel",
-                # "MNLI ValMM LexEntLevel",
-                # "MNLI ValMM LexContAcc",
-                # "MNLI ValMM LexEntAcc",
-                # "SNLI Val Acc",
-                # "SNLI Val NegContLevel",
-                # "SNLI Val NegEntLevel",
-                # "SNLI Val NegContAcc",
-                # "SNLI Val NegEntAcc",
-                # "SNLI Val LexContLevel",
-                # "SNLI Val LexEntLevel",
-                # "SNLI Val LexContAcc",
-                # "SNLI Val LexEntAcc",
-                # "HANS Val Acc",
-                # "HANS Val LexContLevel",
-                # "HANS Val LexEntLevel",
-                # "HANS Val LexContAcc",
-                # "HANS Val LexEntAcc",
-                # "HANS Val SubContLevel",
-                # "HANS Val SubEntLevel",
-                # "HANS Val SubContAcc",
-                # "HANS Val SubEntAcc",
-                # "HANS Val ConstContLevel",
-                # "HANS Val ConstLexEntLevel",
-                # "HANS Val ConstLexContAcc",
-                # "HANS Val ConstLexEntAcc",
+                "MNLI ValM Acc",
+                "MNLI ValM NegContLevel",
+                "MNLI ValM NegEntLevel",
+                "MNLI ValM NegContAcc",
+                "MNLI ValM NegEntAcc",
+                "MNLI ValM LexContLevel",
+                "MNLI ValM LexEntLevel",
+                "MNLI ValM LexContAcc",
+                "MNLI ValM LexEntAcc",
+                "MNLI ValMM Acc",
+                "MNLI ValMM NegContLevel",
+                "MNLI ValMM NegEntLevel",
+                "MNLI ValMM NegContAcc",
+                "MNLI ValMM NegEntAcc",
+                "MNLI ValMM LexContLevel",
+                "MNLI ValMM LexEntLevel",
+                "MNLI ValMM LexContAcc",
+                "MNLI ValMM LexEntAcc",
+                "SNLI Val Acc",
+                "SNLI Val NegContLevel",
+                "SNLI Val NegEntLevel",
+                "SNLI Val NegContAcc",
+                "SNLI Val NegEntAcc",
+                "SNLI Val LexContLevel",
+                "SNLI Val LexEntLevel",
+                "SNLI Val LexContAcc",
+                "SNLI Val LexEntAcc",
+                "HANS Val Acc",
+                "HANS Val LexContLevel",
+                "HANS Val LexEntLevel",
+                "HANS Val LexContAcc",
+                "HANS Val LexEntAcc",
+                "HANS Val SubContLevel",
+                "HANS Val SubEntLevel",
+                "HANS Val SubContAcc",
+                "HANS Val SubEntAcc",
+                "HANS Val ConstContLevel",
+                "HANS Val ConstLexEntLevel",
+                "HANS Val ConstLexContAcc",
+                "HANS Val ConstLexEntAcc",
                 "MNLI Val ZContBiasAcc",
                 "MNLI Val ZContAntiBiasAcc",
                 "MNLI Val ZEntBiasAcc",
@@ -167,117 +167,115 @@ def total_evaluation(
 
         results = []
 
-        # # Run MNLI matched evaluation
-        # logits, predictions = get_predictions(model, mnli_val_m_loader)
-        # targets = np.array(mnli_dataset["validation_matched"]["label"])
-        # accuracy = np.mean(predictions == targets)
-        # results.append(accuracy)
-        # # Negation subset (bias towards cont)
-        # neg_cont_acc, neg_ent_acc = evaluate_subset(
-        #     predictions, targets, mnli_negation_indices["val_m_conts"], mnli_negation_indices["val_m_ents"]
-        # )
-        # neg_cont_level = np.mean(logits[mnli_negation_indices["val_m_conts"], 2])
-        # neg_ent_level = np.mean(logits[mnli_negation_indices["val_m_ents"], 2])
-        # results.extend([neg_cont_level, neg_ent_level])
-        # results.extend([neg_cont_acc, neg_ent_acc])
-        # # Lexical Overlap subset (bias towards entail)
-        # lex_cont_acc, lex_ent_acc = evaluate_subset(
-        #     predictions, targets, mnli_overlap_indices["val_m_conts"], mnli_overlap_indices["val_m_ents"]
-        # )
-        # lex_cont_level = np.mean(logits[mnli_overlap_indices["val_m_conts"], 0])
-        # lex_ent_level = np.mean(logits[mnli_overlap_indices["val_m_ents"], 0])
-        # results.extend([lex_cont_level, lex_ent_level])
-        # results.extend([lex_cont_acc, lex_ent_acc])
-
-        # # Run MNLI mismatched evaluation
-        # logits, predictions = get_predictions(model, mnli_val_mm_loader)
-        # targets = np.array(mnli_dataset["validation_mismatched"]["label"])
-        # accuracy = np.mean(predictions == targets)
-        # results.append(accuracy)
-        # # Negation subset (bias towards cont)
-        # neg_cont_acc, neg_ent_acc = evaluate_subset(
-        #     predictions, targets, mnli_negation_indices["val_mm_conts"], mnli_negation_indices["val_mm_ents"]
-        # )
-        # neg_cont_level = np.mean(logits[mnli_negation_indices["val_mm_conts"], 2])
-        # neg_ent_level = np.mean(logits[mnli_negation_indices["val_mm_ents"], 2])
-        # results.extend([neg_cont_level, neg_ent_level])
-        # results.extend([neg_cont_acc, neg_ent_acc])
-        # # Lexical Overlap subset (bias towards entail)
-        # lex_cont_acc, lex_ent_acc = evaluate_subset(
-        #     predictions, targets, mnli_overlap_indices["val_mm_conts"], mnli_overlap_indices["val_mm_ents"]
-        # )
-        # lex_cont_level = np.mean(logits[mnli_overlap_indices["val_mm_conts"], 0])
-        # lex_ent_level = np.mean(logits[mnli_overlap_indices["val_mm_ents"], 0])
-        # results.extend([lex_cont_level, lex_ent_level])
-        # results.extend([lex_cont_acc, lex_ent_acc])
-
-        # # Run SNLI evaluation
-        # logits, predictions = get_predictions(model, snli_val_loader)
-        # targets = np.array(snli_dataset["validation"]["label"])
-        # accuracy = np.mean(predictions == targets)
-        # results.append(accuracy)
-        # # Negation subset (bias towards cont)
-        # neg_cont_acc, neg_ent_acc = evaluate_subset(
-        #     predictions, targets, snli_negation_indices["val_conts"], snli_negation_indices["val_ents"]
-        # )
-        # neg_cont_level = np.mean(logits[snli_negation_indices["val_conts"], 2])
-        # neg_ent_level = np.mean(logits[snli_negation_indices["val_ents"], 2])
-        # results.extend([neg_cont_level, neg_ent_level])
-        # results.extend([neg_cont_acc, neg_ent_acc])
-        # # Lexical Overlap subset (bias towards entail)
-        # lex_cont_acc, lex_ent_acc = evaluate_subset(
-        #     predictions, targets, snli_overlap_indices["val_conts"], snli_overlap_indices["val_ents"]
-        # )
-        # lex_cont_level = np.mean(logits[snli_overlap_indices["val_conts"], 0])
-        # lex_ent_level = np.mean(logits[snli_overlap_indices["val_ents"], 0])
-        # results.extend([lex_cont_level, lex_ent_level])
-        # results.extend([lex_cont_acc, lex_ent_acc])
-
-        # # Run Hans evaluation
-        # logits, predictions = get_predictions(model, hans_loader)
-        # predictions[predictions == 2] = 1
-        # logits = np.concatenate(
-        #     [logits[:, 0:1], logits[:, 1:].max(axis=1, keepdims=True)], axis=1
-        # )  # max between neutral and cont
-        # targets = np.array(hans_dataset["validation"]["label"])
-        # heuristic = np.array(hans_dataset["validation"]["heuristic"])
-        # accuracy_bools = predictions == targets
-        # accuracy = np.mean(accuracy_bools)
-        # results.append(accuracy)
-
-        # # lexical overlap
-        # lex_cont_indices = (heuristic == "lexical_overlap") & (targets == 1)
-        # lex_ent_indices = (heuristic == "lexical_overlap") & (targets == 0)
-        # lex_cont_level = np.mean(logits[lex_cont_indices, 0])
-        # lex_ent_level = np.mean(logits[lex_ent_indices, 0])
-        # lex_cont_acc = np.mean(accuracy_bools[lex_cont_indices])
-        # lex_ent_acc = np.mean(accuracy_bools[lex_ent_indices])
-        # results.extend([lex_cont_level, lex_ent_level, lex_cont_acc, lex_ent_acc])
-
-        # # subsequence
-        # sub_cont_indices = (heuristic == "subsequence") & (targets == 1)
-        # sub_ent_indices = (heuristic == "subsequence") & (targets == 0)
-        # sub_cont_level = np.mean(logits[sub_cont_indices, 0])
-        # sub_ent_level = np.mean(logits[sub_ent_indices, 0])
-        # sub_cont_acc = np.mean(accuracy_bools[sub_cont_indices])
-        # sub_ent_acc = np.mean(accuracy_bools[sub_ent_indices])
-        # results.extend([sub_cont_level, sub_ent_level, sub_cont_acc, sub_ent_acc])
-
-        # # constituent
-        # constitu_cont_indices = (heuristic == "constituent") & (targets == 1)
-        # constitu_ent_indices = (heuristic == "constituent") & (targets == 0)
-        # constitu_cont_level = np.mean(logits[constitu_cont_indices, 0])
-        # constitu_ent_level = np.mean(logits[constitu_ent_indices, 0])
-        # constitu_cont_acc = np.mean(accuracy_bools[constitu_cont_indices])
-        # constitu_ent_acc = np.mean(accuracy_bools[constitu_ent_indices])
-        # results.extend([constitu_cont_level, constitu_ent_level, constitu_cont_acc, constitu_ent_acc])
-
-        # Z Statistic
         # Run MNLI matched evaluation
         logits, predictions = get_predictions(model, mnli_val_m_loader)
         targets = np.array(mnli_dataset["validation_matched"]["label"])
+        accuracy = np.mean(predictions == targets)
+        results.append(accuracy)
+        # Negation subset (bias towards cont)
+        neg_cont_acc, neg_ent_acc = evaluate_subset(
+            predictions, targets, mnli_negation_indices["val_m_conts"], mnli_negation_indices["val_m_ents"]
+        )
+        neg_cont_level = np.mean(logits[mnli_negation_indices["val_m_conts"], 2])
+        neg_ent_level = np.mean(logits[mnli_negation_indices["val_m_ents"], 2])
+        results.extend([neg_cont_level, neg_ent_level])
+        results.extend([neg_cont_acc, neg_ent_acc])
+        # Lexical Overlap subset (bias towards entail)
+        lex_cont_acc, lex_ent_acc = evaluate_subset(
+            predictions, targets, mnli_overlap_indices["val_m_conts"], mnli_overlap_indices["val_m_ents"]
+        )
+        lex_cont_level = np.mean(logits[mnli_overlap_indices["val_m_conts"], 0])
+        lex_ent_level = np.mean(logits[mnli_overlap_indices["val_m_ents"], 0])
+        results.extend([lex_cont_level, lex_ent_level])
+        results.extend([lex_cont_acc, lex_ent_acc])
+
+        # Run MNLI mismatched evaluation
+        logits, predictions = get_predictions(model, mnli_val_mm_loader)
+        targets = np.array(mnli_dataset["validation_mismatched"]["label"])
+        accuracy = np.mean(predictions == targets)
+        results.append(accuracy)
+        # Negation subset (bias towards cont)
+        neg_cont_acc, neg_ent_acc = evaluate_subset(
+            predictions, targets, mnli_negation_indices["val_mm_conts"], mnli_negation_indices["val_mm_ents"]
+        )
+        neg_cont_level = np.mean(logits[mnli_negation_indices["val_mm_conts"], 2])
+        neg_ent_level = np.mean(logits[mnli_negation_indices["val_mm_ents"], 2])
+        results.extend([neg_cont_level, neg_ent_level])
+        results.extend([neg_cont_acc, neg_ent_acc])
+        # Lexical Overlap subset (bias towards entail)
+        lex_cont_acc, lex_ent_acc = evaluate_subset(
+            predictions, targets, mnli_overlap_indices["val_mm_conts"], mnli_overlap_indices["val_mm_ents"]
+        )
+        lex_cont_level = np.mean(logits[mnli_overlap_indices["val_mm_conts"], 0])
+        lex_ent_level = np.mean(logits[mnli_overlap_indices["val_mm_ents"], 0])
+        results.extend([lex_cont_level, lex_ent_level])
+        results.extend([lex_cont_acc, lex_ent_acc])
+
+        # Run SNLI evaluation
+        logits, predictions = get_predictions(model, snli_val_loader)
+        targets = np.array(snli_dataset["validation"]["label"])
+        accuracy = np.mean(predictions == targets)
+        results.append(accuracy)
+        # Negation subset (bias towards cont)
+        neg_cont_acc, neg_ent_acc = evaluate_subset(
+            predictions, targets, snli_negation_indices["val_conts"], snli_negation_indices["val_ents"]
+        )
+        neg_cont_level = np.mean(logits[snli_negation_indices["val_conts"], 2])
+        neg_ent_level = np.mean(logits[snli_negation_indices["val_ents"], 2])
+        results.extend([neg_cont_level, neg_ent_level])
+        results.extend([neg_cont_acc, neg_ent_acc])
+        # Lexical Overlap subset (bias towards entail)
+        lex_cont_acc, lex_ent_acc = evaluate_subset(
+            predictions, targets, snli_overlap_indices["val_conts"], snli_overlap_indices["val_ents"]
+        )
+        lex_cont_level = np.mean(logits[snli_overlap_indices["val_conts"], 0])
+        lex_ent_level = np.mean(logits[snli_overlap_indices["val_ents"], 0])
+        results.extend([lex_cont_level, lex_ent_level])
+        results.extend([lex_cont_acc, lex_ent_acc])
+
+        # Run Hans evaluation
+        logits, predictions = get_predictions(model, hans_loader)
+        predictions[predictions == 2] = 1
+        logits = np.concatenate(
+            [logits[:, 0:1], logits[:, 1:].max(axis=1, keepdims=True)], axis=1
+        )  # max between neutral and cont
+        targets = np.array(hans_dataset["validation"]["label"])
+        heuristic = np.array(hans_dataset["validation"]["heuristic"])
+        accuracy_bools = predictions == targets
+        accuracy = np.mean(accuracy_bools)
+        results.append(accuracy)
+
+        # lexical overlap
+        lex_cont_indices = (heuristic == "lexical_overlap") & (targets == 1)
+        lex_ent_indices = (heuristic == "lexical_overlap") & (targets == 0)
+        lex_cont_level = np.mean(logits[lex_cont_indices, 0])
+        lex_ent_level = np.mean(logits[lex_ent_indices, 0])
+        lex_cont_acc = np.mean(accuracy_bools[lex_cont_indices])
+        lex_ent_acc = np.mean(accuracy_bools[lex_ent_indices])
+        results.extend([lex_cont_level, lex_ent_level, lex_cont_acc, lex_ent_acc])
+
+        # subsequence
+        sub_cont_indices = (heuristic == "subsequence") & (targets == 1)
+        sub_ent_indices = (heuristic == "subsequence") & (targets == 0)
+        sub_cont_level = np.mean(logits[sub_cont_indices, 0])
+        sub_ent_level = np.mean(logits[sub_ent_indices, 0])
+        sub_cont_acc = np.mean(accuracy_bools[sub_cont_indices])
+        sub_ent_acc = np.mean(accuracy_bools[sub_ent_indices])
+        results.extend([sub_cont_level, sub_ent_level, sub_cont_acc, sub_ent_acc])
+
+        # constituent
+        constitu_cont_indices = (heuristic == "constituent") & (targets == 1)
+        constitu_ent_indices = (heuristic == "constituent") & (targets == 0)
+        constitu_cont_level = np.mean(logits[constitu_cont_indices, 0])
+        constitu_ent_level = np.mean(logits[constitu_ent_indices, 0])
+        constitu_cont_acc = np.mean(accuracy_bools[constitu_cont_indices])
+        constitu_ent_acc = np.mean(accuracy_bools[constitu_ent_indices])
+        results.extend([constitu_cont_level, constitu_ent_level, constitu_cont_acc, constitu_ent_acc])
+
+        # Z Statistic
+        logits, predictions = get_predictions(model, mnli_val_m_loader)
+        targets = np.array(mnli_dataset["validation_matched"]["label"])
         acc_bools = predictions == targets
-        # Contradiction subset
         cont_bias_acc = acc_bools[mnli_z_statistic_indices["cont_bias_indices"]].mean()
         cont_antibias_acc = acc_bools[mnli_z_statistic_indices["cont_antibias_indices"]].mean()
         ent_bias_acc = acc_bools[mnli_z_statistic_indices["ent_bias_indices"]].mean()

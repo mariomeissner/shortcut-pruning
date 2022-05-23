@@ -13,6 +13,16 @@ class ReweightByTeacher(nn.Module):
         return (weights * loss).sum() / weights.sum()
 
 
+class ReweightByTeacherScaled(nn.Module):
+    def forward(self, logits, bias_probs, labels):
+        logits = logits.float()  # In case we were in fp16 mode
+        loss = F.cross_entropy(logits, labels, reduction="none")
+        one_hot_labels = torch.eye(logits.size(1), device=logits.device)[labels]
+        weights = 1 - (one_hot_labels * bias_probs).sum(1)
+        weights /= weights.mean() # Scale to mean 1 to recover lost signal
+        return (weights * loss).sum() / weights.sum()
+
+
 class ProductOfExperts(nn.Module):
     def forward(self, logits, bias_probs, labels):
         logits = logits.float()  # In case we were in fp16 mode
@@ -40,6 +50,6 @@ class GeneralizedCELoss(nn.Module):
         if torch.isnan(Yg).any():
             raise NameError("GCE_Yg")
 
-        loss = (F.cross_entropy(logits, labels, reduction="none") * loss_weight)
+        loss = F.cross_entropy(logits, labels, reduction="none") * loss_weight
 
         return loss.mean()
