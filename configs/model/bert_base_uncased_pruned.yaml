@@ -4,8 +4,7 @@ num_labels: ${datamodule.num_labels}
 huggingface_model: "bert-base-uncased"
 learning_rate: 3e-5
 batch_size: ${datamodule.batch_size}
-loss_fn:
-  _target_: torch.nn.CrossEntropyLoss
+loss_fn: "crossentropy"
 use_bias_probs: False
 freeze_weights: False
 sparse_args: ${pruning}
