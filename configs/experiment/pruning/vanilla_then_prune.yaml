@@ -1,22 +1,20 @@
 # @package _global_
 
 defaults:
-  - /pruning: unstructured_pruning.yaml
+  - override /pruning: unstructured_pruning.yaml
   - override /model: bert_base_uncased_pruned.yaml
   - override /datamodule: mnli.yaml
 
 name: pruning/vanilla_then_prune
 seed: 42
-test_after_training: False # Cannot test on MNLI, test set labels are hidden
 
 model:
   loss_fn: "reweight-by-teacher"
-  from_checkpoint: /works/data0/meissner/shortcut-pruning/bert_mnli/checkpoints/last.ckpt
+  from_checkpoint: "/remote/csifs1/disk0/meissner/shortcut-pruning/experiments/baselines/bert/mnli/multiruns/2022-04-18/13-07-56/4/checkpoints/last.ckpt"
   use_bias_probs: True
   freeze_weights: True
 
 datamodule:
-  bias_name: "mnli_shallow_2K_fixed.json"
   bias_path: "/home/meissner/shortcut-pruning/data/weak_models/utama/mnli_shallow_2K_fixed.json"
   batch_size: 128
 
