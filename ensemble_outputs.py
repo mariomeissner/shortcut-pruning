@@ -34,8 +34,8 @@ def ensemble_outputs(folder: str, method: str = "median", squad=False):
                 array = np.mean(array, axis=0)
             elif method == "max":
                 array = np.max(array, axis=0)
-            mean_output = array / array.sum()
-            mean_outputs[key] = mean_output.tolist()
+            # array = array / array.sum()
+            mean_outputs[key] = array.tolist()
         return mean_outputs
 
     if squad:

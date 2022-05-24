@@ -48,7 +48,7 @@ def total_evaluation(
         checkpoints = [f"0-{number}.ckpt" for number in checkpoints]
         path_list = [recorder_checkpoint_path + checkpoint for checkpoint in checkpoints]
     else:
-        raise ValueError("Provide either of checkpoint_path or checkpoint_list_file!")
+        raise ValueError("Provide a valid path parameter!")
 
     # Load first model to get tokenizer
     print(f"Getting tokenizer name from first model.", file=sys.stderr)
