@@ -2,7 +2,7 @@
 
 wandb:
   _target_: pytorch_lightning.loggers.wandb.WandbLogger
-  project: shortcut-pruning
+  project: weak-ensembles
   # entity: ""  # set to name of your wandb team
   name: ${name} # Set to null (None) to let wandb add their funny random names
   save_dir: "."

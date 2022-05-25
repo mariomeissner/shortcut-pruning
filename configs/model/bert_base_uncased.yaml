@@ -2,7 +2,9 @@ _target_: src.models.hf_model.SequenceClassificationTransformer
 
 num_labels: ${datamodule.num_labels}
 huggingface_model: "bert-base-uncased"
-learning_rate: 2e-5
 batch_size: ${datamodule.batch_size}
+learning_rate: 3e-5
+weight_decay: 0.1
+warmup_steps: 2000
 loss_fn: "crossentropy"
 use_bias_probs: False
