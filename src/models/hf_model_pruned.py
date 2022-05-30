@@ -24,8 +24,10 @@ class PruningTransformer(SequenceClassificationTransformer):
             raise ValueError("Only bert-base-uncased is available for pruning.")
 
         if self.hparams.from_checkpoint is not None:
-            log.info(f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}")
-            checkpoint = torch.load(self.hparams.from_checkpoint)
+            log.info(
+                f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}, onto device {self.device}"
+            )
+            checkpoint = torch.load(self.hparams.from_checkpoint, map_location=self.device)
             self.load_state_dict(checkpoint["state_dict"])
 
         self.model_patcher = ModelPatchingCoordinator(
