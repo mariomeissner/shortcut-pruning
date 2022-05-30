@@ -1,7 +1,7 @@
 # Reweight using unknown-bias
+import torch
 from torch import nn
 from torch.nn import functional as F
-import torch
 
 
 class ReweightByTeacher(nn.Module):
@@ -13,13 +13,23 @@ class ReweightByTeacher(nn.Module):
         return (weights * loss).sum() / weights.sum()
 
 
+class ReweightByTeacherFromLogits(nn.Module):
+    def forward(self, logits, bias_probs, labels):
+        logits = logits.float()  # In case we were in fp16 mode
+        loss = F.cross_entropy(logits, labels, reduction="none")
+        one_hot_labels = torch.eye(logits.size(1), device=logits.device)[labels]
+        bias_probs = torch.softmax(bias_probs, -1)
+        weights = 1 - (one_hot_labels * bias_probs).sum(1)
+        return (weights * loss).sum() / weights.sum()
+
+
 class ReweightByTeacherScaled(nn.Module):
     def forward(self, logits, bias_probs, labels):
         logits = logits.float()  # In case we were in fp16 mode
         loss = F.cross_entropy(logits, labels, reduction="none")
         one_hot_labels = torch.eye(logits.size(1), device=logits.device)[labels]
         weights = 1 - (one_hot_labels * bias_probs).sum(1)
-        weights /= weights.mean() # Scale to mean 1 to recover lost signal
+        weights /= weights.mean()  # Scale to mean 1 to recover lost signal
         return (weights * loss).sum() / weights.sum()
 
 
@@ -29,6 +39,13 @@ class ProductOfExperts(nn.Module):
         log_model_probs = F.log_softmax(logits, dim=1)
         log_bias_probs = torch.log(bias_probs)
         return F.cross_entropy(log_model_probs + log_bias_probs, labels)
+
+
+class ProductOfExpertsFromLogits(nn.Module):
+    def forward(self, logits, bias_logits, labels):
+        logits = logits.float()  # In case we were in fp16 mode
+        log_model_probs = F.log_softmax(logits, dim=1)
+        return F.cross_entropy(log_model_probs + bias_logits, labels)
 
 
 class GeneralizedCELoss(nn.Module):
