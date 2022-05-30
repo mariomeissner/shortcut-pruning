@@ -10,9 +10,10 @@ seed: 888
 model: 
   # following the details on GitHub 
   # (https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/train_distill_bert.py)
-  weight_decay: 0.01
-  warmup_steps: 0.1
-  learning_rate: 5e-5
+  # TODO: I dont know which is better, I didn't get good results with this turned on
+  # weight_decay: 0.01
+  # warmup_steps: 0.1
+  # learning_rate: 5e-5
 
 datamodule:
   batch_size: 32
