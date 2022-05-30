@@ -3,19 +3,19 @@
 defaults:
   - override /pruning: unstructured_pruning.yaml
   - override /model: bert_base_uncased_pruned.yaml
-  - override /datamodule: qqp.yaml
+  - override /datamodule: fever.yaml
 
 name: pruning/vanilla_then_prune
 seed: 42
 
 model:
   loss_fn: "reweight-by-teacher"
-  from_checkpoint: "/remote/csifs1/disk0/meissner/shortcut-pruning/experiments/baselines/bert/qqp/multiruns/2022-05-19/11-25-19/0/checkpoints/last.ckpt"
+  from_checkpoint: null
   use_bias_probs: True
   freeze_weights: True
 
 datamodule:
-  bias_path: "/home/meissner/shortcut-pruning/data/weak_models/tinybert/qqp/tiny-qqp-10.json"
+  bias_path: null
   batch_size: 128
 
 trainer:
