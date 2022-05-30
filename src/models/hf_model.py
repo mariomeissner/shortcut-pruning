@@ -13,7 +13,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher, ReweightByTeacherScaled
+from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher, ReweightByTeacherScaled, ProductOfExpertsFromLogits
 
 log = utils.get_logger(__name__)
 
@@ -67,6 +67,8 @@ class SequenceClassificationTransformer(LightningModule):
             self.loss_fn = ReweightByTeacherScaled()
         elif loss_fn == "product-of-experts":
             self.loss_fn = ProductOfExperts()
+        elif loss_fn == "product-of-experts-from-logits":
+            self.loss_fn = ProductOfExpertsFromLogits()
         else:
             raise ValueError("Unrecognized loss function name.")
 
