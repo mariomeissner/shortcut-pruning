@@ -11,7 +11,7 @@ seed: 42
 model:
   loss_fn: "reweight-by-teacher"
   from_checkpoint: "/remote/csifs1/disk0/meissner/shortcut-pruning/experiments/baselines/bert/mnli/multiruns/2022-04-18/13-07-56/4/checkpoints/last.ckpt"
-  warmup_steps: 5000
+  # warmup_steps: 5000 seems to make it much worse
   use_bias_probs: True
   freeze_weights: True
 
