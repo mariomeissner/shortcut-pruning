@@ -26,6 +26,7 @@ def evaluate_on_mnli(
     do_mismatched: bool = False,
     do_negation_subsets: bool = False,
     do_lex_overlap_subsets: bool = False,
+    do_new_neg_ent_subset: bool = False,
     max_length: int = 128,
     batch_size: int = 256,
 ):
@@ -98,6 +99,8 @@ def evaluate_on_mnli(
             negation_indices = json.load(_file)
         with open("data/subsets/mnli_lex_overlap_indices.json") as _file:
             overlap_indices = json.load(_file)
+        with open("data/subsets/mnli_neg_ent_new_indices.json") as _file:
+            new_neg_ent_indices = json.load(_file)
 
         def evaluate_subset(predictions, targets, cont_indices, ent_indices):
             all_indices = cont_indices + ent_indices
@@ -133,6 +136,10 @@ def evaluate_on_mnli(
                     predictions, targets, overlap_indices["val_m_conts"], overlap_indices["val_m_ents"]
                 )
                 results.extend([lex_cont_acc, lex_ent_acc, lex_acc])
+
+            if do_new_neg_ent_subset:
+                bools = predictions == targets
+                results.append(bools[new_neg_ent_indices].mean())
 
         # Run mismatched evaluation
         if do_mismatched:
