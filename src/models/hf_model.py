@@ -13,7 +13,13 @@ from torchmetrics.classification.accuracy import Accuracy
 from transformers import AdamW, AutoModel, get_linear_schedule_with_warmup
 
 from src.utils import utils
-from src.losses import GeneralizedCELoss, ProductOfExperts, ReweightByTeacher, ReweightByTeacherScaled, ProductOfExpertsFromLogits
+from src.losses import (
+    GeneralizedCELoss,
+    ProductOfExperts,
+    ReweightByTeacher,
+    ReweightByTeacherScaled,
+    ProductOfExpertsFromLogits,
+)
 
 log = utils.get_logger(__name__)
 
@@ -35,7 +41,9 @@ class SequenceClassificationTransformer(LightningModule):
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
         batch_size: int = 64,
-        generalized_loss_q = 0.7,
+        generalized_loss_q: float = 0.7,
+        freeze_weights: bool = False,
+        from_checkpoint: str = None,
     ):
         super().__init__()
 
@@ -88,6 +96,23 @@ class SequenceClassificationTransformer(LightningModule):
         params = [param.name for param in params if param.kind == param.POSITIONAL_OR_KEYWORD]
         self.forward_signature = params
 
+        if self.hparams.from_checkpoint is not None:
+            log.info(
+                f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}, onto device {self.device}"
+            )
+            checkpoint = torch.load(self.hparams.from_checkpoint, map_location=self.device)
+            self.load_state_dict(checkpoint["state_dict"])
+
+        if self.hparams.freeze_weights:
+            self.freeze_non_mask()
+
+    def freeze_non_mask(self):
+        for name, param in self.model.named_parameters():
+            if name.split(".")[-1] != "mask_scores":
+                param.requires_grad = False
+        for name, param in self.classifier.named_parameters():
+            param.requires_grad = False
+
     def forward(self, batch: Dict[str, torch.tensor]):
         filtered_batch = {key: batch[key] for key in batch.keys() if key in self.forward_signature}
         outputs = self.model(**filtered_batch, return_dict=True)
@@ -106,6 +131,8 @@ class SequenceClassificationTransformer(LightningModule):
             loss = self.loss_fn(logits, bias_probs, labels)
         else:
             loss = self.loss_fn(logits, labels)
+        # Need this to fix strange behavior after freeze?
+        # loss = torch.autograd.Variable(loss, requires_grad = True)
         return loss, preds
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx: int):
@@ -222,9 +249,9 @@ class SequenceClassificationTransformer(LightningModule):
         total_steps = self.total_training_steps()
         # Check if warump is a number or a ratio
         if self.hparams.warmup_steps == int(self.hparams.warmup_steps):
-            warmup_steps = self.hparams.warmup_steps # number
+            warmup_steps = self.hparams.warmup_steps  # number
         else:
-            warmup_steps = total_steps * self.hparams.warmup_steps # ratio
+            warmup_steps = total_steps * self.hparams.warmup_steps  # ratio
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

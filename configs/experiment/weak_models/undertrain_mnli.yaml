@@ -7,7 +7,7 @@ defaults:
 name: weak/undertrain/bert/mnli
 seed: 888
 
-model: 
+# model: 
   # following the details on GitHub 
   # (https://github.com/UKPLab/emnlp2020-debiasing-unknown/blob/main/src/train_distill_bert.py)
   # TODO: I dont know which is better, I didn't get good results with this turned on

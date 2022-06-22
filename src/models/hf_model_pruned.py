@@ -16,19 +16,25 @@ log = get_logger(__name__)
 
 
 class PruningTransformer(SequenceClassificationTransformer):
-    def __init__(self, sparse_args: dict, freeze_weights: bool, from_checkpoint: str = None, **kwargs):
+    def __init__(
+        self,
+        sparse_args: dict,
+        # freeze_weights: bool,
+        # from_checkpoint: str = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.save_hyperparameters()
 
         if self.hparams.huggingface_model != "bert-base-uncased":
             raise ValueError("Only bert-base-uncased is available for pruning.")
 
-        if self.hparams.from_checkpoint is not None:
-            log.info(
-                f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}, onto device {self.device}"
-            )
-            checkpoint = torch.load(self.hparams.from_checkpoint, map_location=self.device)
-            self.load_state_dict(checkpoint["state_dict"])
+        # if self.hparams.from_checkpoint is not None:
+        #     log.info(
+        #         f"Loading weights from the specified checkpoint:\n{self.hparams.from_checkpoint}, onto device {self.device}"
+        #     )
+        #     checkpoint = torch.load(self.hparams.from_checkpoint, map_location=self.device)
+        #     self.load_state_dict(checkpoint["state_dict"])
 
         self.model_patcher = ModelPatchingCoordinator(
             sparse_args=SparseTrainingArguments(**self.hparams.sparse_args),
@@ -44,10 +50,10 @@ class PruningTransformer(SequenceClassificationTransformer):
         if self.hparams.freeze_weights:
             self.freeze_non_mask()
 
-    def freeze_non_mask(self):
-        for name, param in self.model.named_parameters():
-            if name.split(".")[-1] != "mask_scores":
-                param.requires_grad = False
+    # def freeze_non_mask(self):
+    #     for name, param in self.model.named_parameters():
+    #         if name.split(".")[-1] != "mask_scores":
+    #             param.requires_grad = False
 
     def forward(self, batch: Dict[str, torch.tensor]):
         # Overridden to call scheduler

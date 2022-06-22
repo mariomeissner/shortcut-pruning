@@ -10,7 +10,7 @@ seed: 888
 datamodule:
   batch_size: 32
 
-model:
+model: # following paper
   learning_rate: 2e-5
   weight_decay: 0.1
 
