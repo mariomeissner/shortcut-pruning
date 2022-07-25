@@ -46,7 +46,7 @@ def evaluate_on_fever(
         tokenizer_name=model.hparams.huggingface_model,
     )
     fever_datamodule.setup()
-    dataloader = fever_datamodule.test_dataloader()
+    dataloader = fever_datamodule.test_dataloader()[0]
 
     result_string = []
 
@@ -66,13 +66,13 @@ def evaluate_on_fever(
                 logits, preds = model(batch)
                 preds = list(preds.detach().cpu())
             predictions.extend(preds)
-            targets.extend(batch["label"])
+            targets.extend(batch["labels"])
 
         predictions = np.array(predictions)
         targets = np.array(targets)
         bools = predictions == targets
         total_acc = bools.mean()
-        refutes_acc = bools[targets == 1]
+        refutes_acc = bools[targets == 1].mean()
 
         result_string.append(f"{total_acc}, {refutes_acc}")
 
