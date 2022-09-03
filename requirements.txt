@@ -35,10 +35,11 @@ isort           # import sorting
 flake8          # code analysis
 
 # --------- ray ------------ #
+# ray is not necessary for the basic functionality
 # Manually setting versions here to fix errors
-ray[default]
-aiohttp==3.7
-aioredis==1.3.1
+# ray[default]
+# aiohttp==3.7
+# aioredis==1.3.1
 
 # --------- others --------- #
 fire            # easy argument handling for scripts
