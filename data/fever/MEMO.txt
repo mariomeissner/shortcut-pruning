@@ -1,0 +1,6 @@
+I obtained all the files from: https://github.com/TalSchuster/FeverSymmetric
+They link to the NLI Style FEVER datasets in a dropbox folder:
+https://www.dropbox.com/s/v1a0depfg7jp90f/fever.train.jsonl
+https://www.dropbox.com/s/bdwf46sa2gcuf6j/fever.dev.jsonl
+
+The symmetric files are in the repo files themselves.

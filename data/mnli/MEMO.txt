@@ -1,0 +1,5 @@
+I downloaded the MNLI hard subsets from Kaggle:
+https://www.kaggle.com/c/multinli-matched-open-hard-evaluation
+https://www.kaggle.com/c/multinli-mismatched-open-hard-evaluation/
+
+Then I manually created the TSV versions.
