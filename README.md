@@ -4,9 +4,9 @@
 
 ## Introduction
 
-This is the repository for my master's thesis (link coming soon) and for the paper on masked debiasing (link coming soon) under review at EMNLP 2022. It follows the [lightning-hydra template](TODO) to provide an easy-to-use and reproducible experimentation environment. Follow the instructions below to reproduce the results of my thesis and the paper.
+This is the repository for my master's thesis (link coming soon) and for the paper on masked debiasing (link coming soon) under review at EMNLP 2022. It follows the [lightning-hydra template](https://github.com/ashleve/lightning-hydra-template) to provide an easy-to-use and reproducible experimentation environment. Follow the instructions below to reproduce the results of my thesis and the paper.
 
-All experiments I have carried out for both weak learner debiasing and masked debiasing can be executed with this repository, and a log of all the models can be found in [this public wandb page]().
+All experiments I have carried out for both weak learner debiasing and masked debiasing can be executed with this repository, and a log of all the models can be found in [this public wandb page](https://wandb.ai/jmariomeissner/shortcut-pruning?workspace=user-).
 
 ## Installation
 
