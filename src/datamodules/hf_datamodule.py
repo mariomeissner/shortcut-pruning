@@ -16,7 +16,7 @@ from torchvision.transforms import transforms
 from transformers import DataCollatorWithPadding
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from bias_utils import load_bias, load_bias_probs
+from src.utils.bias_utils import load_bias_probs
 from src.utils.utils import get_logger
 
 log = get_logger(__name__)

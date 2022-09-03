@@ -8,7 +8,7 @@ import os
 import torch
 import random
 import datasets
-from bias_utils import load_bias_probs
+from src.utils.bias_utils import load_bias_probs
 from src.datamodules import squad_processing
 from datasets.dataset_dict import DatasetDict
 from pathlib import Path
