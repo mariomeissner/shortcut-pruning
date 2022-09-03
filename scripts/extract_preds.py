@@ -1,22 +1,21 @@
 import importlib
+import json
 from multiprocessing.sharedctypes import Value
 from typing import Sequence, Tuple
-from datasets.dataset_dict import DatasetDict, Dataset
-import fire
-import datasets
-import json
 
+import datasets
+import fire
 import numpy as np
-from transformers import AutoTokenizer
-from pytorch_lightning import LightningModule
-from torch.utils.data import DataLoader
-from transformers import DataCollatorWithPadding
-from tqdm import tqdm
 import torch
+from datasets.dataset_dict import Dataset, DatasetDict
+from pytorch_lightning import LightningModule
 from torch.nn.functional import softmax
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoTokenizer, DataCollatorWithPadding
+
 from src.models.hf_model import SequenceClassificationTransformer
 from src.models.hf_model_pruned import PruningTransformer
-
 
 FEVER_LABEL_MAP = {"SUPPORTS": 0, "REFUTES": 1, "NOT ENOUGH INFO": 2}
 
